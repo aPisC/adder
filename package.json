@@ -12,8 +12,8 @@
   },
   "keywords": [
     "safe eval",
-	"python",
-	"untrusted",
+    "python",
+    "untrusted",
     "cage",
     "eval",
     "user code"
@@ -23,5 +23,10 @@
   "bugs": {
     "url": "https://github.com/RonenNess/adder/issues"
   },
-  "homepage": "https://ronenness.github.io/adder/"
+  "homepage": "https://ronenness.github.io/adder/",
+  "dependencies": {
+    "browserify": "^16.5.2",
+    "uglify-js": "^3.10.1",
+    "uglifyjs": "^2.4.11"
+  }
 }
