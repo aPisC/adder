@@ -238,7 +238,10 @@ var apiFuncs = {
     this._list.forEach(function (e, i) {
       apiFuncs.append.call(
         nl,
-        this._context._interpreter.callFunction(callback, [e, i, this])
+        new Variable(
+          this._context,
+          this._context._interpreter.callFunction(callback, [e, i, this])
+        )
       );
     }, this);
 
@@ -253,7 +256,7 @@ var apiFuncs = {
 
     this._list.forEach(function (e, i) {
       if (callback._context._interpreter.callFunction(callback, [e, i, this]))
-        apiFuncs.append.call(nl, e);
+        apiFuncs.append.call(nl, new Variable(this._context, e));
     }, this);
 
     return nl;
