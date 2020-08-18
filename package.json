@@ -1,6 +1,6 @@
 {
   "name": "@apisc/adder-script",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Python like language to execute untrusted codes in browsers and Node.js.",
   "main": "dist/node-adder.js",
   "scripts": {
