@@ -276,6 +276,9 @@ var Interpreter = Class({
 
       // call and return the function result
       var ret = func.__imp.apply(object !== undefined ? object : this, args);
+      // make Adder object from returned value, deatached from original jsObject
+      if (ret && typeof ret === "object" && !ret.__isAdderObject)
+        ret = Core.Variable.makeAdderObjects(this._context, ret, true);
       this._context.getScope().returnValue = ret;
       this.setLastValue(ret);
       return ret;
