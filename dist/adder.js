@@ -3890,7 +3890,7 @@ var Variable = Class({
       case "boolean":
         return LanguageDefs.keywords[String(val)];
       case "function":
-        return val.toRepr();
+        return (val.toRepr && val.toRepr()) || val.toString();
       default:
         // check if value got a string function of its own
         if (val && val.toRepr) {
@@ -4825,6 +4825,13 @@ var Interpreter = Class({
   callFunction: function (func, args, object) {
     // if function is string, get it from context
     if (typeof func === "string") func = this._context.getVar(func);
+    if (typeof func === "function")
+      func = {
+        __imp: func,
+        isFunction: true,
+        isBuiltinFunc: true,
+        convertParamsToNativeJs: true,
+      };
 
     // if got a var containing the function, take the function value from it
     if (func._value) {

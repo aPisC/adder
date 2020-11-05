@@ -116,6 +116,45 @@
             convertParamsToNativeJs: false,
         });
 
+        function define(fn, requiredParams, optionalParams) {
+  const m = {
+    func: fn,
+  };
+  if (requiredParams != null) m.requiredParams = requiredParams;
+  if (optionalParams != null) m.optionalParams = optionalParams;
+
+  return m;
+}
+
+function builtinConstructor(creator, ...memberNames) {
+  return define(function (...p) {
+    const v = creator(this);
+    memberNames.forEach((m, i) => (v[m] = p[i]));
+    return v;
+  }, memberNames.length, 0);
+}
+
+ function ŁModule (AdderScript) {
+  const lambdaParam = AdderScript.defineBuiltinObject('LambdaParam', {});
+
+  return {
+    param: builtinConstructor(lambdaParam, '_key'),
+    fn: define((fn, ...p) => {
+      return () => {
+        alert('');
+      };
+    }),
+    call: define((fn, ...p) => {
+      fn(...p);
+    }),
+  };
+}
+
+
+window.AdderScript.addBuiltinModule("Ł", ŁModule(window.AdderScript));
+
+
+
         // spawn a program
         var program = window.AdderScript.newProgram();
 

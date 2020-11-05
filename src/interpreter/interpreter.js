@@ -224,6 +224,13 @@ var Interpreter = Class({
   callFunction: function (func, args, object) {
     // if function is string, get it from context
     if (typeof func === "string") func = this._context.getVar(func);
+    if (typeof func === "function")
+      func = {
+        __imp: func,
+        isFunction: true,
+        isBuiltinFunc: true,
+        convertParamsToNativeJs: true,
+      };
 
     // if got a var containing the function, take the function value from it
     if (func._value) {

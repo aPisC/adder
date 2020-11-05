@@ -402,7 +402,7 @@ var Variable = Class({
       case "boolean":
         return LanguageDefs.keywords[String(val)];
       case "function":
-        return val.toRepr();
+        return (val.toRepr && val.toRepr()) || val.toString();
       default:
         // check if value got a string function of its own
         if (val && val.toRepr) {
