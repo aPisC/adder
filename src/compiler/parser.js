@@ -1,12 +1,12 @@
 "use strict";
 
 /**
-* The parser takes tokens list and convert into a tree of expressions, optimized for evaluation.
-* To put it simple: it converts a list of tokens into an AST.
-*
-* Author: Ronen Ness.
-* Since: 2016
-*/
+ * The parser takes tokens list and convert into a tree of expressions, optimized for evaluation.
+ * To put it simple: it converts a list of tokens into an AST.
+ *
+ * Author: Ronen Ness.
+ * Since: 2016
+ */
 
 // include errors
 var Errors = require("./../errors");
@@ -29,93 +29,131 @@ var TokenTypes = require("./tokens");
 // global scope that holds the current tokens and position we are parsing.
 // these are used internally in all the helper and parsing functions.
 var gscope = {
-    i: 0,
-    tokens: [],
-    line: undefined,
+  i: 0,
+  tokens: [],
+  line: undefined,
 };
 
 // function to define a new symbol type
 var defineSymbol = function (id, nud, lbp, led) {
-    var sym = symbols[id] || {};
-    symbols[id] = {
-        lbp: sym.lbp || lbp,
-        nud: sym.nud || nud,
-        led: sym.lef || led
-    };
+  var sym = symbols[id] || {};
+  symbols[id] = {
+    lbp: sym.lbp || lbp,
+    nud: sym.nud || nud,
+    led: sym.lef || led,
+  };
 };
 
 // define an infix symbol type
 var defineInfix = function (id, lbp, rbp, led) {
-    rbp = rbp || lbp;
-    defineSymbol(id, null, lbp, led || function (left) {
+  rbp = rbp || lbp;
+  defineSymbol(
+    id,
+    null,
+    lbp,
+    led ||
+      function (left) {
         return {
-            type: id,
-            left: left,
-            right: parseExpression(rbp)
+          type: id,
+          left: left,
+          right: parseExpression(rbp),
         };
-    });
+      }
+  );
 };
 
 // define a prefix symbol type
 var definePrefix = function (id, rbp) {
-    defineSymbol(id, function () {
-        return {
-            type: id,
-            right: parseExpression(rbp)
-        };
-    });
+  defineSymbol(id, function () {
+    return {
+      type: id,
+      right: parseExpression(rbp),
+    };
+  });
 };
 
 // define comma and colon symbols
 defineSymbol(",");
 defineSymbol("blockopen", function (val) {
-    return val;
+  return val;
 });
 
 // define number symbol
 defineSymbol("number", function (number) {
-    return number;
+  return number;
 });
 
 // define string symbol
 defineSymbol("string", function (str) {
-    return str;
+  return str;
 });
 
 // define identifier symbol
 defineSymbol("identifier", function (name) {
-    var token = currToken();
-    if (token && token.type === "(" && !wordOperators.has(name.value)) {
-        var args = [];
-        if (gscope.tokens[gscope.i + 1].v === ")") {popToken();}
-        else {
-            do {
-                popToken();
-                if (!currToken()) {
-                    throw new Errors.SyntaxError("Missing closing parenthesis ')'");
-                }
-                args.push(parseExpression(2));
-            } while (currToken() && currToken().type === ",");
-            if (!currToken() || currToken().type !== ")") {
-                throw new Errors.SyntaxError("Missing closing parenthesis ')'");
-            }
-        }
+  var token = currToken();
+  var r = name;
+  while (token && token.type === "(" && !wordOperators.has(name.value)) {
+    var args = [];
+    if (gscope.tokens[gscope.i + 1].v === ")") {
+      popToken();
+    } else {
+      do {
         popToken();
-        return {
-            type: "call",
-            args: args,
-            name: name.value
-        };
+        if (!currToken()) {
+          throw new Errors.SyntaxError("Missing closing parenthesis ')'");
+        }
+        args.push(parseExpression(2));
+      } while (currToken() && currToken().type === ",");
+      if (!currToken() || currToken().type !== ")") {
+        throw new Errors.SyntaxError("Missing closing parenthesis ')'");
+      }
     }
-    return name;
+    popToken();
+    r = {
+      type: "call",
+      args: args,
+      name: r.type === "call" ? null : name.value,
+      baseCall: r.type === "call" ? r : null,
+    };
+    token = currToken();
+  }
+  return r;
 });
 
 // define the '(' symbol
 defineSymbol("(", function () {
-    var value = parseExpression(2);
-    if (currToken().type !== ")") new Errors.SyntaxError("Missing closing parenthesis!");
+  var value = parseExpression(2);
+  if (currToken().type !== ")")
+    new Errors.SyntaxError("Missing closing parenthesis!");
+  popToken();
+
+  // create chained function calls
+  var token = currToken();
+  while (token && token.type === "(" && !wordOperators.has(name.value)) {
+    var args = [];
+    if (gscope.tokens[gscope.i + 1].v === ")") {
+      popToken();
+    } else {
+      do {
+        popToken();
+        if (!currToken()) {
+          throw new Errors.SyntaxError("Missing closing parenthesis ')'");
+        }
+        args.push(parseExpression(2));
+      } while (currToken() && currToken().type === ",");
+      if (!currToken() || currToken().type !== ")") {
+        throw new Errors.SyntaxError("Missing closing parenthesis ')'");
+      }
+    }
     popToken();
-    return value;
+    value = {
+      type: "call",
+      args: args,
+      baseCall: value,
+    };
+    token = currToken();
+  }
+  return value;
 });
 
 // define the ')' symbol
@@ -149,166 +187,176 @@ defineInfix(".", 13);
 
 // assignment operator
 defineInfix("=", 1, 2, function (left) {
-    if (left.type === "call") {
-        for (var i = 0; i < left.args.length; i++) {
-            if (left.args[i].type !== "identifier") throw new Errors.SyntaxError("Invalid argument name '" + left.args[i].value + "'!");
-        }
-        return {
-            type: "function",
-            name: left.name,
-            args: left.args,
-            value: parseExpression(2)
-        };
-    } else if (left.type === "identifier") {
-        return {
-            type: "assign",
-            name: left.value,
-            value: parseExpression(2)
-        };
+  if (left.type === "call") {
+    for (var i = 0; i < left.args.length; i++) {
+      if (left.args[i].type !== "identifier")
+        throw new Errors.SyntaxError(
+          "Invalid argument name '" + left.args[i].value + "'!"
+        );
     }
-    else throw new Errors.SyntaxError("Can't assign to literal!");
+    return {
+      type: "function",
+      name: left.name,
+      args: left.args,
+      value: parseExpression(2),
+    };
+  } else if (left.type === "identifier") {
+    return {
+      type: "assign",
+      name: left.value,
+      value: parseExpression(2),
+    };
+  } else throw new Errors.SyntaxError("Can't assign to literal!");
 });
 
 // add all assignment+ operators
 var assignmentWith = ["+", "-", "*", "/", "|", "&", "%"];
-for (var i = 0; i < assignmentWith.length; ++i)
-{
-    (function(operator){
-        defineInfix(operator + "=", 1, 2, function (left) {
-            if (left.type === "call") {
-                for (var i = 0; i < left.args.length; i++) {
-                    if (left.args[i].type !== "identifier") throw new Errors.SyntaxError("Invalid argument name '" + left.args[i].value + "'!");
-                }
-                return {
-                    type: "function",
-                    name: left.name,
-                    args: left.args,
-                    value: parseExpression(2)
-                };
-            } else if (left.type === "identifier") {
-                return {
-                    type: "assign+",
-                    op: operator,
-                    name: left.value,
-                    value: parseExpression(2)
-                };
-            }
-            else throw new Errors.SyntaxError("Can't assign to literal!");
-        });
-    })(assignmentWith[i]);
+for (var i = 0; i < assignmentWith.length; ++i) {
+  (function (operator) {
+    defineInfix(operator + "=", 1, 2, function (left) {
+      if (left.type === "call") {
+        for (var i = 0; i < left.args.length; i++) {
+          if (left.args[i].type !== "identifier")
+            throw new Errors.SyntaxError(
+              "Invalid argument name '" + left.args[i].value + "'!"
+            );
+        }
+        return {
+          type: "function",
+          name: left.name,
+          args: left.args,
+          value: parseExpression(2),
+        };
+      } else if (left.type === "identifier") {
+        return {
+          type: "assign+",
+          op: operator,
+          name: left.value,
+          value: parseExpression(2),
+        };
+      } else throw new Errors.SyntaxError("Can't assign to literal!");
+    });
+  })(assignmentWith[i]);
 }
 
 // convert a token to a symbol instance
 var tokenToSymbol = function (token) {
+  // convert from token types to symbol types
+  var type;
+  switch (token.t) {
+    case TokenTypes.operator:
+    case TokenTypes.punctuation:
+      if (token.v === ":") {
+        type = "blockopen";
+      } else {
+        type = token.v;
+      }
+      break;
 
-    // convert from token types to symbol types
-    var type;
-    switch (token.t)
-    {
-        case TokenTypes.operator:
-        case TokenTypes.punctuation:
-            if (token.v === ':') {type = 'blockopen';}
-            else {type = token.v;}
-            break;
+    case TokenTypes.number:
+      type = "number";
+      break;
 
-        case TokenTypes.number:
-            type = 'number';
-            break;
+    case TokenTypes.identifier:
+      type = "identifier";
+      break;
 
-        case TokenTypes.identifier:
-            type = 'identifier';
-            break;
+    case TokenTypes.string:
+      type = "string";
+      break;
 
-        case TokenTypes.string:
-            type = 'string';
-            break;
+    default:
+      throw new Errors.SyntaxError("Unknown token type '" + token.t + "'!");
+  }
 
-        default:
-            throw new Errors.SyntaxError("Unknown token type '" + token.t + "'!");
-    }
+  // create symbol and set its type and value
+  var sym = Object.create(symbols[type]);
+  sym.type = type;
+  sym.value = token.v;
 
-    // create symbol and set its type and value
-    var sym = Object.create(symbols[type]);
-    sym.type = type;
-    sym.value = token.v;
-
-    // return the newly created symbol
-    return sym;
+  // return the newly created symbol
+  return sym;
 };
 
 // start the actual parsing!
 
 // function to get current token
 var currToken = function () {
-    return gscope.tokens[gscope.i] ? tokenToSymbol(gscope.tokens[gscope.i]) : null;
+  return gscope.tokens[gscope.i]
+    ? tokenToSymbol(gscope.tokens[gscope.i])
+    : null;
 };
 
 // function to get current token and advance index to next token
 var popToken = function () {
-    var ret = currToken();
-    gscope.i++;
-    return ret;
+  var ret = currToken();
+  gscope.i++;
+  return ret;
 };
 
 // parse an expression
 var parseExpression = function (rbp) {
+  // default rbp
+  if (rbp === undefined) {
+    rbp = 0;
+  }
 
-    // default rbp
-    if (rbp === undefined) {rbp = 0;}
+  // get current token and advance to next
+  var t = popToken();
+  if (t === null) {
+    return;
+  }
 
-    // get current token and advance to next
-    var t = popToken();
-    if (t === null) {return;}
+  // if current token is nud type
+  if (!t.nud) {
+    throw new Errors.SyntaxError("Unexpected token: " + t.type);
+  }
 
-    // if current token is nud type
-    if (!t.nud) {throw new Errors.SyntaxError("Unexpected token: " + t.type);}
+  // get left operand
+  var left = t.nud(t);
 
-    // get left operand
-    var left = t.nud(t);
-
-    // parse next gscope.tokens
-    while (currToken() && rbp < currToken().lbp) {
-        t = popToken();
-        if (!t.led) {throw new Errors.SyntaxError("Unexpected token: " + t.type);}
-        left = t.led(left);
+  // parse next gscope.tokens
+  while (currToken() && rbp < currToken().lbp) {
+    t = popToken();
+    if (!t.led) {
+      throw new Errors.SyntaxError("Unexpected token: " + t.type);
     }
+    left = t.led(left);
+  }
 
-    // return left operand
-    return left;
+  // return left operand
+  return left;
 };
 
 // take a list of tokens and generate a parsed tree
 // @param tokens - list of tokens, output of lexer.
 // @param line - is the line we are parsing (optional, used for exceptions etc)
-function parse(tokens, line)
-{
-    // set global scope of current parsing - current tokens and index
-    gscope.tokens = tokens;
-    gscope.i = 0;
-    gscope.line = line;
+function parse(tokens, line) {
+  // set global scope of current parsing - current tokens and index
+  gscope.tokens = tokens;
+  gscope.i = 0;
+  gscope.line = line;
 
-    try {
-        // parse all tokens and return AST
-        var parseTree = [];
-        while (currToken()) {
-            parseTree.push(parseExpression());
-        }
-        return parseTree;
+  try {
+    // parse all tokens and return AST
+    var parseTree = [];
+    while (currToken()) {
+      parseTree.push(parseExpression());
     }
-    catch(e) {
-        if (e.expectedError) {
-            if (e.line === undefined) {
-                e.message += " [at line: " + gscope.line + "]";
-                e.line = gscope.line;
-            }
-            throw e;
-        }
-        throw new Errors.SyntaxError("Unknown syntax error!", gscope.line);
+    return parseTree;
+  } catch (e) {
+    if (e.expectedError) {
+      if (e.line === undefined) {
+        e.message += " [at line: " + gscope.line + "]";
+        e.line = gscope.line;
+      }
+      throw e;
     }
+    throw new Errors.SyntaxError("Unknown syntax error!", gscope.line);
+  }
 }
 
 // export the parser functions
 module.exports = {
-    parse: parse,
+  parse: parse,
 };
-

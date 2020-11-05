@@ -80,6 +80,42 @@
             showDebugConsole: true,
         });
 
+        window.AdderScript.addBuiltinFunction({
+            name: 'clg',
+            func: console.log,
+        });
+        window.AdderScript.addBuiltinFunction({
+            name: 'clg2',
+            func: console.log,
+            convertParamsToNativeJs: false
+        });
+        window.AdderScript.addBuiltinFunction({
+            name: 'call',
+            func: function(fn, p) {
+                if(typeof fn === 'function')
+                    return fn(p);
+                if(fn && typeof fn === 'object' && fn.execute)
+                    return fn.execute([p]);
+            },
+        });
+        window.AdderScript.addBuiltinFunction({
+            name: 'prompt',
+            func: function(fn) {
+                setTimeout(function () {fn(10)}, 1000);
+            },
+        });
+
+        window.AdderScript.addBuiltinFunction({
+            name: 'all',
+            func: function (list, fn) {
+                var a = list.toNativeJs();
+                a.forEach((e, i) => {
+                    fn._context._interpreter.callFunction(fn, [e, i])
+                });
+            },
+            convertParamsToNativeJs: false,
+        });
+
         // spawn a program
         var program = window.AdderScript.newProgram();
 

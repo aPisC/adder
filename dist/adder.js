@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.AdderScript = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.AdderScript = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
 /**
@@ -655,12 +655,12 @@ module.exports = Lexer;
 "use strict";
 
 /**
-* The parser takes tokens list and convert into a tree of expressions, optimized for evaluation.
-* To put it simple: it converts a list of tokens into an AST.
-*
-* Author: Ronen Ness.
-* Since: 2016
-*/
+ * The parser takes tokens list and convert into a tree of expressions, optimized for evaluation.
+ * To put it simple: it converts a list of tokens into an AST.
+ *
+ * Author: Ronen Ness.
+ * Since: 2016
+ */
 
 // include errors
 var Errors = require("./../errors");
@@ -683,93 +683,131 @@ var TokenTypes = require("./tokens");
 // global scope that holds the current tokens and position we are parsing.
 // these are used internally in all the helper and parsing functions.
 var gscope = {
-    i: 0,
-    tokens: [],
-    line: undefined,
+  i: 0,
+  tokens: [],
+  line: undefined,
 };
 
 // function to define a new symbol type
 var defineSymbol = function (id, nud, lbp, led) {
-    var sym = symbols[id] || {};
-    symbols[id] = {
-        lbp: sym.lbp || lbp,
-        nud: sym.nud || nud,
-        led: sym.lef || led
-    };
+  var sym = symbols[id] || {};
+  symbols[id] = {
+    lbp: sym.lbp || lbp,
+    nud: sym.nud || nud,
+    led: sym.lef || led,
+  };
 };
 
 // define an infix symbol type
 var defineInfix = function (id, lbp, rbp, led) {
-    rbp = rbp || lbp;
-    defineSymbol(id, null, lbp, led || function (left) {
+  rbp = rbp || lbp;
+  defineSymbol(
+    id,
+    null,
+    lbp,
+    led ||
+      function (left) {
         return {
-            type: id,
-            left: left,
-            right: parseExpression(rbp)
+          type: id,
+          left: left,
+          right: parseExpression(rbp),
         };
-    });
+      }
+  );
 };
 
 // define a prefix symbol type
 var definePrefix = function (id, rbp) {
-    defineSymbol(id, function () {
-        return {
-            type: id,
-            right: parseExpression(rbp)
-        };
-    });
+  defineSymbol(id, function () {
+    return {
+      type: id,
+      right: parseExpression(rbp),
+    };
+  });
 };
 
 // define comma and colon symbols
 defineSymbol(",");
 defineSymbol("blockopen", function (val) {
-    return val;
+  return val;
 });
 
 // define number symbol
 defineSymbol("number", function (number) {
-    return number;
+  return number;
 });
 
 // define string symbol
 defineSymbol("string", function (str) {
-    return str;
+  return str;
 });
 
 // define identifier symbol
 defineSymbol("identifier", function (name) {
-    var token = currToken();
-    if (token && token.type === "(" && !wordOperators.has(name.value)) {
-        var args = [];
-        if (gscope.tokens[gscope.i + 1].v === ")") {popToken();}
-        else {
-            do {
-                popToken();
-                if (!currToken()) {
-                    throw new Errors.SyntaxError("Missing closing parenthesis ')'");
-                }
-                args.push(parseExpression(2));
-            } while (currToken() && currToken().type === ",");
-            if (!currToken() || currToken().type !== ")") {
-                throw new Errors.SyntaxError("Missing closing parenthesis ')'");
-            }
-        }
+  var token = currToken();
+  var r = name;
+  while (token && token.type === "(" && !wordOperators.has(name.value)) {
+    var args = [];
+    if (gscope.tokens[gscope.i + 1].v === ")") {
+      popToken();
+    } else {
+      do {
         popToken();
-        return {
-            type: "call",
-            args: args,
-            name: name.value
-        };
+        if (!currToken()) {
+          throw new Errors.SyntaxError("Missing closing parenthesis ')'");
+        }
+        args.push(parseExpression(2));
+      } while (currToken() && currToken().type === ",");
+      if (!currToken() || currToken().type !== ")") {
+        throw new Errors.SyntaxError("Missing closing parenthesis ')'");
+      }
     }
-    return name;
+    popToken();
+    r = {
+      type: "call",
+      args: args,
+      name: r.type === "call" ? null : name.value,
+      baseCall: r.type === "call" ? r : null,
+    };
+    token = currToken();
+  }
+  return r;
 });
 
 // define the '(' symbol
 defineSymbol("(", function () {
-    var value = parseExpression(2);
-    if (currToken().type !== ")") new Errors.SyntaxError("Missing closing parenthesis!");
+  var value = parseExpression(2);
+  if (currToken().type !== ")")
+    new Errors.SyntaxError("Missing closing parenthesis!");
+  popToken();
+
+  // create chained function calls
+  var token = currToken();
+  while (token && token.type === "(" && !wordOperators.has(name.value)) {
+    var args = [];
+    if (gscope.tokens[gscope.i + 1].v === ")") {
+      popToken();
+    } else {
+      do {
+        popToken();
+        if (!currToken()) {
+          throw new Errors.SyntaxError("Missing closing parenthesis ')'");
+        }
+        args.push(parseExpression(2));
+      } while (currToken() && currToken().type === ",");
+      if (!currToken() || currToken().type !== ")") {
+        throw new Errors.SyntaxError("Missing closing parenthesis ')'");
+      }
+    }
     popToken();
-    return value;
+    value = {
+      type: "call",
+      args: args,
+      baseCall: value,
+    };
+    token = currToken();
+  }
+  return value;
 });
 
 // define the ')' symbol
@@ -803,169 +841,179 @@ defineInfix(".", 13);
 
 // assignment operator
 defineInfix("=", 1, 2, function (left) {
-    if (left.type === "call") {
-        for (var i = 0; i < left.args.length; i++) {
-            if (left.args[i].type !== "identifier") throw new Errors.SyntaxError("Invalid argument name '" + left.args[i].value + "'!");
-        }
-        return {
-            type: "function",
-            name: left.name,
-            args: left.args,
-            value: parseExpression(2)
-        };
-    } else if (left.type === "identifier") {
-        return {
-            type: "assign",
-            name: left.value,
-            value: parseExpression(2)
-        };
+  if (left.type === "call") {
+    for (var i = 0; i < left.args.length; i++) {
+      if (left.args[i].type !== "identifier")
+        throw new Errors.SyntaxError(
+          "Invalid argument name '" + left.args[i].value + "'!"
+        );
     }
-    else throw new Errors.SyntaxError("Can't assign to literal!");
+    return {
+      type: "function",
+      name: left.name,
+      args: left.args,
+      value: parseExpression(2),
+    };
+  } else if (left.type === "identifier") {
+    return {
+      type: "assign",
+      name: left.value,
+      value: parseExpression(2),
+    };
+  } else throw new Errors.SyntaxError("Can't assign to literal!");
 });
 
 // add all assignment+ operators
 var assignmentWith = ["+", "-", "*", "/", "|", "&", "%"];
-for (var i = 0; i < assignmentWith.length; ++i)
-{
-    (function(operator){
-        defineInfix(operator + "=", 1, 2, function (left) {
-            if (left.type === "call") {
-                for (var i = 0; i < left.args.length; i++) {
-                    if (left.args[i].type !== "identifier") throw new Errors.SyntaxError("Invalid argument name '" + left.args[i].value + "'!");
-                }
-                return {
-                    type: "function",
-                    name: left.name,
-                    args: left.args,
-                    value: parseExpression(2)
-                };
-            } else if (left.type === "identifier") {
-                return {
-                    type: "assign+",
-                    op: operator,
-                    name: left.value,
-                    value: parseExpression(2)
-                };
-            }
-            else throw new Errors.SyntaxError("Can't assign to literal!");
-        });
-    })(assignmentWith[i]);
+for (var i = 0; i < assignmentWith.length; ++i) {
+  (function (operator) {
+    defineInfix(operator + "=", 1, 2, function (left) {
+      if (left.type === "call") {
+        for (var i = 0; i < left.args.length; i++) {
+          if (left.args[i].type !== "identifier")
+            throw new Errors.SyntaxError(
+              "Invalid argument name '" + left.args[i].value + "'!"
+            );
+        }
+        return {
+          type: "function",
+          name: left.name,
+          args: left.args,
+          value: parseExpression(2),
+        };
+      } else if (left.type === "identifier") {
+        return {
+          type: "assign+",
+          op: operator,
+          name: left.value,
+          value: parseExpression(2),
+        };
+      } else throw new Errors.SyntaxError("Can't assign to literal!");
+    });
+  })(assignmentWith[i]);
 }
 
 // convert a token to a symbol instance
 var tokenToSymbol = function (token) {
+  // convert from token types to symbol types
+  var type;
+  switch (token.t) {
+    case TokenTypes.operator:
+    case TokenTypes.punctuation:
+      if (token.v === ":") {
+        type = "blockopen";
+      } else {
+        type = token.v;
+      }
+      break;
 
-    // convert from token types to symbol types
-    var type;
-    switch (token.t)
-    {
-        case TokenTypes.operator:
-        case TokenTypes.punctuation:
-            if (token.v === ':') {type = 'blockopen';}
-            else {type = token.v;}
-            break;
+    case TokenTypes.number:
+      type = "number";
+      break;
 
-        case TokenTypes.number:
-            type = 'number';
-            break;
+    case TokenTypes.identifier:
+      type = "identifier";
+      break;
 
-        case TokenTypes.identifier:
-            type = 'identifier';
-            break;
+    case TokenTypes.string:
+      type = "string";
+      break;
 
-        case TokenTypes.string:
-            type = 'string';
-            break;
+    default:
+      throw new Errors.SyntaxError("Unknown token type '" + token.t + "'!");
+  }
 
-        default:
-            throw new Errors.SyntaxError("Unknown token type '" + token.t + "'!");
-    }
+  // create symbol and set its type and value
+  var sym = Object.create(symbols[type]);
+  sym.type = type;
+  sym.value = token.v;
 
-    // create symbol and set its type and value
-    var sym = Object.create(symbols[type]);
-    sym.type = type;
-    sym.value = token.v;
-
-    // return the newly created symbol
-    return sym;
+  // return the newly created symbol
+  return sym;
 };
 
 // start the actual parsing!
 
 // function to get current token
 var currToken = function () {
-    return gscope.tokens[gscope.i] ? tokenToSymbol(gscope.tokens[gscope.i]) : null;
+  return gscope.tokens[gscope.i]
+    ? tokenToSymbol(gscope.tokens[gscope.i])
+    : null;
 };
 
 // function to get current token and advance index to next token
 var popToken = function () {
-    var ret = currToken();
-    gscope.i++;
-    return ret;
+  var ret = currToken();
+  gscope.i++;
+  return ret;
 };
 
 // parse an expression
 var parseExpression = function (rbp) {
+  // default rbp
+  if (rbp === undefined) {
+    rbp = 0;
+  }
 
-    // default rbp
-    if (rbp === undefined) {rbp = 0;}
+  // get current token and advance to next
+  var t = popToken();
+  if (t === null) {
+    return;
+  }
 
-    // get current token and advance to next
-    var t = popToken();
-    if (t === null) {return;}
+  // if current token is nud type
+  if (!t.nud) {
+    throw new Errors.SyntaxError("Unexpected token: " + t.type);
+  }
 
-    // if current token is nud type
-    if (!t.nud) {throw new Errors.SyntaxError("Unexpected token: " + t.type);}
+  // get left operand
+  var left = t.nud(t);
 
-    // get left operand
-    var left = t.nud(t);
-
-    // parse next gscope.tokens
-    while (currToken() && rbp < currToken().lbp) {
-        t = popToken();
-        if (!t.led) {throw new Errors.SyntaxError("Unexpected token: " + t.type);}
-        left = t.led(left);
+  // parse next gscope.tokens
+  while (currToken() && rbp < currToken().lbp) {
+    t = popToken();
+    if (!t.led) {
+      throw new Errors.SyntaxError("Unexpected token: " + t.type);
     }
+    left = t.led(left);
+  }
 
-    // return left operand
-    return left;
+  // return left operand
+  return left;
 };
 
 // take a list of tokens and generate a parsed tree
 // @param tokens - list of tokens, output of lexer.
 // @param line - is the line we are parsing (optional, used for exceptions etc)
-function parse(tokens, line)
-{
-    // set global scope of current parsing - current tokens and index
-    gscope.tokens = tokens;
-    gscope.i = 0;
-    gscope.line = line;
+function parse(tokens, line) {
+  // set global scope of current parsing - current tokens and index
+  gscope.tokens = tokens;
+  gscope.i = 0;
+  gscope.line = line;
 
-    try {
-        // parse all tokens and return AST
-        var parseTree = [];
-        while (currToken()) {
-            parseTree.push(parseExpression());
-        }
-        return parseTree;
+  try {
+    // parse all tokens and return AST
+    var parseTree = [];
+    while (currToken()) {
+      parseTree.push(parseExpression());
     }
-    catch(e) {
-        if (e.expectedError) {
-            if (e.line === undefined) {
-                e.message += " [at line: " + gscope.line + "]";
-                e.line = gscope.line;
-            }
-            throw e;
-        }
-        throw new Errors.SyntaxError("Unknown syntax error!", gscope.line);
+    return parseTree;
+  } catch (e) {
+    if (e.expectedError) {
+      if (e.line === undefined) {
+        e.message += " [at line: " + gscope.line + "]";
+        e.line = gscope.line;
+      }
+      throw e;
     }
+    throw new Errors.SyntaxError("Unknown syntax error!", gscope.line);
+  }
 }
 
 // export the parser functions
 module.exports = {
-    parse: parse,
+  parse: parse,
 };
-
 
 },{"./../errors":28,"./../language/defs":34,"./../utils":79,"./tokens":6}],6:[function(require,module,exports){
 module.exports = {
@@ -1914,16 +1962,16 @@ module.exports = Executable;
 "use strict";
 
 /**
-* A single value, function call, or an arithmetic expression that can be evaluated.
-*
-* Author: Ronen Ness.
-* Since: 2016
-*/
+ * A single value, function call, or an arithmetic expression that can be evaluated.
+ *
+ * Author: Ronen Ness.
+ * Since: 2016
+ */
 
 // include jsface for classes
 var jsface = require("./../dependencies/jsface"),
-    Class  = jsface.Class,
-    extend = jsface.extend;
+  Class = jsface.Class,
+  extend = jsface.extend;
 
 // include errors
 var Errors = require("./../errors");
@@ -1936,251 +1984,293 @@ var Lexer = require("./../compiler/lexer");
 
 // set node optimized value
 function setNodeOptimizedVal(node, val) {
-    node.type = typeof val;
-    node.value = val;
-    node.wasOptimized = true;
-    delete node.left;
-    delete node.right;
+  node.type = typeof val;
+  node.value = val;
+  node.wasOptimized = true;
+  delete node.left;
+  delete node.right;
 }
 
 // dictionary of operators and the corresponding function to execute them
 var opFuncs = {
-    "*": function(exp,a,b) {return a*b;},
-    "/": function(exp,a,b) {return a/b;},
-    "+": function(exp,a,b) {return b === undefined ? +a : a+b;},
-    "-": function(exp,a,b) {return b === undefined ? -a : a-b;},
-    "|": function(exp,a,b) {return a|b;},
-    "&": function(exp,a,b) {return a&b;},
-    "%": function(exp,a,b) {return a%b;},
-    "or": function(exp,a,b) {return a||b;},
-    "and": function(exp,a,b) {return a&&b;},
-    "in": function(exp,a,b) {
-        a = Variable.makeVariables(exp._context,a);
-        b = Variable.makeAdderObjects(exp._context,b);
-        if (!b.has) {
-            throw new Errors.RuntimeError(exp._context, "Object " + (b.type || "undefined") + " does not support 'in' operator!");
-        }
-        return b.has(a);
-    },
-    "not in": function(exp,a,b) {
-        a = Variable.makeVariables(exp._context,a);
-        b = Variable.makeAdderObjects(exp._context,b);
-        if (!b.has) {
-            throw new Errors.RuntimeError(exp._context, "Object " + (b.type || "undefined") + " does not support 'in' operator!");
-        }
-        return !b.has(a);
-    },
-    "not": function(exp,a) {return !a;},
-    "**": function(exp,a,b) {return Math.pow(a,b);},
-    "<": function(exp,a,b) {return a<b;},
-    ">": function(exp,a,b) {return a>b;},
-    "<=": function(exp,a,b) {return a<=b;},
-    ">=": function(exp,a,b) {return a>=b;},
-    "==": function(exp,a,b) {
-        a = Variable.makeVariables(exp._context,a);
-        b = Variable.makeVariables(exp._context,b);
-        return Variable.equal(a, b);
-    },
-    "is": function(exp,a,b) {
-        return a === b;
-    },
-    "is not": function(exp,a,b) {
-        return a !== b;
-    },
-    "!=": function(exp,a,b) {
-        a = Variable.makeVariables(exp._context,a);
-        b = Variable.makeVariables(exp._context,b);
-        return !Variable.equal(a, b);
-    },
+  "*": function (exp, a, b) {
+    return a * b;
+  },
+  "/": function (exp, a, b) {
+    return a / b;
+  },
+  "+": function (exp, a, b) {
+    return b === undefined ? +a : a + b;
+  },
+  "-": function (exp, a, b) {
+    return b === undefined ? -a : a - b;
+  },
+  "|": function (exp, a, b) {
+    return a | b;
+  },
+  "&": function (exp, a, b) {
+    return a & b;
+  },
+  "%": function (exp, a, b) {
+    return a % b;
+  },
+  or: function (exp, a, b) {
+    return a || b;
+  },
+  and: function (exp, a, b) {
+    return a && b;
+  },
+  in: function (exp, a, b) {
+    a = Variable.makeVariables(exp._context, a);
+    b = Variable.makeAdderObjects(exp._context, b);
+    if (!b.has) {
+      throw new Errors.RuntimeError(
+        exp._context,
+        "Object " + (b.type || "undefined") + " does not support 'in' operator!"
+      );
+    }
+    return b.has(a);
+  },
+  "not in": function (exp, a, b) {
+    a = Variable.makeVariables(exp._context, a);
+    b = Variable.makeAdderObjects(exp._context, b);
+    if (!b.has) {
+      throw new Errors.RuntimeError(
+        exp._context,
+        "Object " + (b.type || "undefined") + " does not support 'in' operator!"
+      );
+    }
+    return !b.has(a);
+  },
+  not: function (exp, a) {
+    return !a;
+  },
+  "**": function (exp, a, b) {
+    return Math.pow(a, b);
+  },
+  "<": function (exp, a, b) {
+    return a < b;
+  },
+  ">": function (exp, a, b) {
+    return a > b;
+  },
+  "<=": function (exp, a, b) {
+    return a <= b;
+  },
+  ">=": function (exp, a, b) {
+    return a >= b;
+  },
+  "==": function (exp, a, b) {
+    a = Variable.makeVariables(exp._context, a);
+    b = Variable.makeVariables(exp._context, b);
+    return Variable.equal(a, b);
+  },
+  is: function (exp, a, b) {
+    return a === b;
+  },
+  "is not": function (exp, a, b) {
+    return a !== b;
+  },
+  "!=": function (exp, a, b) {
+    a = Variable.makeVariables(exp._context, a);
+    b = Variable.makeVariables(exp._context, b);
+    return !Variable.equal(a, b);
+  },
 };
 
 // expression base class
 var Expression = Class({
+  // expression constructor
+  // @param context - context of program currently executed.
+  // @param ast - expression ast node to evaluate (output of compile).
+  constructor: function (context, ast) {
+    // store context and expression
+    this._context = context;
+    this._ast = ast;
+  },
 
-    // expression constructor
-    // @param context - context of program currently executed.
-    // @param ast - expression ast node to evaluate (output of compile).
-    constructor: function(context, ast)
-    {
-        // store context and expression
-        this._context = context;
-        this._ast = ast;
-    },
+  // parse a single AST node
+  // @param node - current AST node to evaluate.
+  // @param currObj - current object we are holding (used for expressions like "foo.bar.bla()").
+  // @param returnAsVar - if true, will return variable objects if possible.
+  parseNode: function (node, currObj, returnAsVar) {
+    // undefined node? that happens if we're missing a side of an expression, like "5 + "
+    if (node === undefined) {
+      throw new Errors.SyntaxError("Unexpected EOL or missing argument!");
+    }
 
-    // parse a single AST node
-    // @param node - current AST node to evaluate.
-    // @param currObj - current object we are holding (used for expressions like "foo.bar.bla()").
-    // @param returnAsVar - if true, will return variable objects if possible.
-    parseNode: function (node, currObj, returnAsVar) {
+    // parse based on node type
+    switch (node.type) {
+      // if its a connecting dot (eg the dot in "foo.bar()")
+      case ".":
+        var leftObj = this.parseNode(node.left);
+        return this.parseNode(node.right, leftObj);
+        break;
 
-        // undefined node? that happens if we're missing a side of an expression, like "5 + "
-        if (node === undefined)
-        {
-            throw new Errors.SyntaxError("Unexpected EOL or missing argument!");
+      // if its a number
+      case "number":
+        return parseFloat(node.value);
+
+      // if its a boolean
+      case "boolean":
+        return node.value;
+
+      // if its an object
+      case "object":
+        return node.value;
+
+      // if its a string
+      case "string":
+        var ret = String(node.value);
+        if (ret[0] === '"' || ret[0] === "'") {
+          ret = ret.substr(1, ret.length - 2);
+        }
+        return ret;
+
+      // if it a variable / identifier / keyword
+      case "identifier":
+        // get variable
+        var value = this._context.getVar(node.value, currObj);
+
+        // if requested value and not variable
+        if (!returnAsVar) {
+          // get value from variable
+          var readonly = true;
+          if (value._value !== undefined) {
+            readonly = value._scopeData.readonly;
+            value = value._value;
+          }
+
+          // if its a readonly var, cache value
+          if (readonly) {
+            setNodeOptimizedVal(node, value);
+          }
         }
 
-        // parse based on node type
-        switch (node.type) {
+        // return value
+        return value;
 
-            // if its a connecting dot (eg the dot in "foo.bar()")
-            case '.':
-                var leftObj = this.parseNode(node.left);
-                return this.parseNode(node.right, leftObj);
-                break;
+      // if its assignment expression
+      case "assign":
+        return this._context.setVar(node.name, this.parseNode(node.value));
 
-            // if its a number
-            case "number":
-                return parseFloat(node.value);
-
-            // if its a boolean
-            case "boolean":
-                return node.value;
-
-            // if its an object
-            case "object":
-                return node.value;
-
-            // if its a string
-            case "string":
-                var ret = String(node.value);
-                if (ret[0] === '"' || ret[0] === "'") {
-                    ret = ret.substr(1, ret.length-2);
-                }
-                return ret;
-
-            // if it a variable / identifier / keyword
-            case "identifier":
-
-                // get variable
-                var value = this._context.getVar(node.value, currObj);
-
-                // if requested value and not variable
-                if (!returnAsVar) {
-
-                    // get value from variable
-                    var readonly = true;
-                    if (value._value !== undefined) {
-                        readonly = value._scopeData.readonly;
-                        value = value._value;
-                    }
-
-                    // if its a readonly var, cache value
-                    if (readonly) {
-                        setNodeOptimizedVal(node, value);
-                    }
-                }
-
-                // return value
-                return value;
-
-            // if its assignment expression
-            case "assign":
-                return this._context.setVar(node.name, this.parseNode(node.value));
-
-            // if its assignment+ expression (+=, -=, *=, ...)
-            case "assign+":
-                // get the operator part (the +, -, *, ..)
-                var opFunc = opFuncs[node.op];
-                if (!opFunc) {
-                    throw new Errors.SyntaxError("Unknown operator '" + node.op + "='.");
-                }
-
-                // get both sides, evaluate and set
-                var _var = this._context.getVar(node.name, currObj);
-                var a = _var._value;
-                var b = this.parseNode(node.value);
-                if (b && b._value !== undefined) {b = b._value;}
-                var result = opFunc(this, a, b);
-                return (_var._scopeData.scope || this._context).setVar(node.name, result);
-
-            // a function call
-            case "call":
-
-                // get function to invoke
-                var func = this._context.getVar(node.name, currObj);
-
-                // parse args (and also check if they are all simple types)
-                var args = [];
-                var isAllSimple = true;
-                for (var i = 0; i < node.args.length; i++) {
-
-                    // parse arg
-                    var arg = this.parseNode(node.args[i], undefined, true);
-                    args.push(arg);
-
-                    // if this arg was not optimized, it means it contained parts that are not const / simple
-                    if (arg && typeof arg === "object" && !arg.wasOptimized) {
-                        isAllSimple = false;
-                    }
-                }
-
-                // execute function and get return value
-                var ret = this._context._interpreter.callFunction(func, args, currObj);
-
-                // if function is deterministic (eg func(x) will always be y) and all args are simple types, optimize by saving the return value.
-                if (func.deterministic && typeof ret !== "object" && isAllSimple) {
-                    setNodeOptimizedVal(node, ret);
-                }
-
-                // return function result
-                return ret;
-
-            // default - check if its an operator
-            default:
-                // if its an operator
-                if (opFuncs[node.type]) {
-
-                    // get operator function
-                    var opFunc = opFuncs[node.type];
-
-                    // will contain evaluation return value
-                    var ret;
-
-                    // if got left-side evaluate with left and right side (eg "5 + 2")
-                    if (node.left) {
-                        var l = this.parseNode(node.left);
-                        var r = this.parseNode(node.right);
-                        if (l && l._value !== undefined) {l = l._value;}
-                        if (r && r._value !== undefined) {r = r._value;}
-                        ret = opFunc(this, l, r);
-                    }
-                    // else evaluate only with right side (eg "-2")
-                    else {
-                        var r = this.parseNode(node.right);
-                        if (r && r._value !== undefined) {r = r._value;}
-                        return opFunc(this, r);
-                    }
-
-                    // special optimization!
-                    // if both left and right expressions are consts (string / number) set this node after first evaluation
-                    // this optimization turns stuff like "5 + 2" into just "7" and save a lot of time.
-                    if (node.wasOptimized === undefined) {
-                        if ((!node.left || node.left.type === "string" || node.left.type === "number") &&
-                            (node.right.type === "string" || node.right.type === "number")) {
-                                setNodeOptimizedVal(node, ret);
-                        }
-                        else {node.wasOptimized = false;}
-                    }
-
-                    // return value
-                    return ret;
-                }
-
-                // if got here it means its unknown node type!
-                return node;
+      // if its assignment+ expression (+=, -=, *=, ...)
+      case "assign+":
+        // get the operator part (the +, -, *, ..)
+        var opFunc = opFuncs[node.op];
+        if (!opFunc) {
+          throw new Errors.SyntaxError("Unknown operator '" + node.op + "='.");
         }
-    },
 
-    // evaluate and return expression
-    eval: function()
-    {
-        return this.parseNode(this._ast);
-    },
+        // get both sides, evaluate and set
+        var _var = this._context.getVar(node.name, currObj);
+        var a = _var._value;
+        var b = this.parseNode(node.value);
+        if (b && b._value !== undefined) {
+          b = b._value;
+        }
+        var result = opFunc(this, a, b);
+        return (_var._scopeData.scope || this._context).setVar(
+          node.name,
+          result
+        );
+
+      // a function call
+      case "call":
+        // get function to invoke
+        var func = node.baseCall
+          ? this.parseNode(node.baseCall)
+          : this._context.getVar(node.name, currObj);
+
+        // parse args (and also check if they are all simple types)
+        var args = [];
+        var isAllSimple = true;
+        for (var i = 0; i < node.args.length; i++) {
+          // parse arg
+          var arg = this.parseNode(node.args[i], undefined, true);
+          args.push(arg);
+
+          // if this arg was not optimized, it means it contained parts that are not const / simple
+          if (arg && typeof arg === "object" && !arg.wasOptimized) {
+            isAllSimple = false;
+          }
+        }
+
+        // execute function and get return value
+        var ret = this._context._interpreter.callFunction(func, args, currObj);
+
+        // if function is deterministic (eg func(x) will always be y) and all args are simple types, optimize by saving the return value.
+        if (func.deterministic && typeof ret !== "object" && isAllSimple) {
+          setNodeOptimizedVal(node, ret);
+        }
+
+        // return function result
+        return ret;
+
+      // default - check if its an operator
+      default:
+        // if its an operator
+        if (opFuncs[node.type]) {
+          // get operator function
+          var opFunc = opFuncs[node.type];
+
+          // will contain evaluation return value
+          var ret;
+
+          // if got left-side evaluate with left and right side (eg "5 + 2")
+          if (node.left) {
+            var l = this.parseNode(node.left);
+            var r = this.parseNode(node.right);
+            if (l && l._value !== undefined) {
+              l = l._value;
+            }
+            if (r && r._value !== undefined) {
+              r = r._value;
+            }
+            ret = opFunc(this, l, r);
+          }
+          // else evaluate only with right side (eg "-2")
+          else {
+            var r = this.parseNode(node.right);
+            if (r && r._value !== undefined) {
+              r = r._value;
+            }
+            return opFunc(this, r);
+          }
+
+          // special optimization!
+          // if both left and right expressions are consts (string / number) set this node after first evaluation
+          // this optimization turns stuff like "5 + 2" into just "7" and save a lot of time.
+          if (node.wasOptimized === undefined) {
+            if (
+              (!node.left ||
+                node.left.type === "string" ||
+                node.left.type === "number") &&
+              (node.right.type === "string" || node.right.type === "number")
+            ) {
+              setNodeOptimizedVal(node, ret);
+            } else {
+              node.wasOptimized = false;
+            }
+          }
+
+          // return value
+          return ret;
+        }
+
+        // if got here it means its unknown node type!
+        return node;
+    }
+  },
+
+  // evaluate and return expression
+  eval: function () {
+    return this.parseNode(this._ast);
+  },
 });
 
 // export the statement class
 module.exports = Expression;
-
 
 },{"./../compiler/lexer":4,"./../dependencies/jsface":24,"./../errors":28,"./variable":22}],14:[function(require,module,exports){
 "use strict";
@@ -2215,16 +2305,16 @@ module.exports = core;
 "use strict";
 
 /**
-* A built-in list object.
-*
-* Author: Ronen Ness.
-* Since: 2016
-*/
+ * A built-in list object.
+ *
+ * Author: Ronen Ness.
+ * Since: 2016
+ */
 
 // include jsface for classes
 var jsface = require("./../dependencies/jsface"),
-    Class  = jsface.Class,
-    extend = jsface.extend;
+  Class = jsface.Class,
+  extend = jsface.extend;
 
 // include errors
 var Errors = require("./../errors");
@@ -2240,287 +2330,380 @@ var BuiltinFunc = require("./builtin_func");
 
 // make sure list length is valid
 function validate_len(list) {
-    if (list._list.length > list._context._interpreter._flags.maxContainersLen) {
-        throw new Errors.ExceedMemoryLimit("List exceeded maximum container length (" + list._context._interpreter._flags.maxContainersLen + ")");
-    }
+  if (list._list.length > list._context._interpreter._flags.maxContainersLen) {
+    throw new Errors.ExceedMemoryLimit(
+      "List exceeded maximum container length (" +
+        list._context._interpreter._flags.maxContainersLen +
+        ")"
+    );
+  }
 }
 
 // all the api functions of the list
 var apiFuncs = {
+  // clone the list
+  clone: function () {
+    return new List(this._context, this._list);
+  },
 
-    // clone the list
-    clone: function()
-    {
-        return new List(this._context, this._list);
-    },
+  // check if empty list
+  empty: function () {
+    return this._list.length === 0;
+  },
 
-    // check if empty list
-    empty: function()
-    {
-        return this._list.length === 0;
-    },
+  // convert to set and return
+  to_set: function () {
+    return new _Set(this._context, this._list);
+  },
 
-    // convert to set and return
-    to_set: function()
-    {
-        return new _Set(this._context, this._list);
-    },
+  // return list length
+  len: function () {
+    return this._list.length;
+  },
 
-    // return list length
-    len: function()
-    {
-        return this._list.length;
-    },
+  // append item to list
+  append: function (item) {
+    this._list.push(item);
+    validate_len(this);
+    this._context._interpreter.updateMemoryUsage(item._estimatedSize);
+    return this;
+  },
 
-    // append item to list
-    append: function(item)
-    {
-        this._list.push(item);
-        validate_len(this);
-        this._context._interpreter.updateMemoryUsage(item._estimatedSize);
-        return this;
-    },
+  // return true if value exists in the list
+  has: function (item) {
+    return this.index(item) !== -1;
+  },
 
-    // return true if value exists in the list
-    has: function(item)
-    {
-        return this.index(item) !== -1;
-    },
+  // clear list
+  clear: function () {
+    this._list = [];
+  },
 
-    // clear list
-    clear: function()
-    {
-        this._list = [];
-    },
+  // count how many times item appear in the list
+  count: function (item) {
+    // count occurrences
+    var ret = 0;
+    for (var i = 0; i < this._list.length; ++i) {
+      if (Variable.equal(this._list[i], item)) {
+        ret++;
+      }
+    }
 
-    // count how many times item appear in the list
-    count: function(item)
-    {
-        // count occurrences
-        var ret = 0;
-        for (var i = 0; i < this._list.length; ++i)
-        {
-            if (Variable.equal(this._list[i], item)) {
-                ret++;
-            }
-        }
+    // return counter
+    return ret;
+  },
 
-        // return counter
-        return ret;
-    },
+  // extend list with another list
+  extend: function (other) {
+    if (other.type !== "list") {
+      throw new Errors.RuntimeError(
+        "List 'extend()' expecting another list as param ('" +
+          other.type +
+          "' given)."
+      );
+    }
+    this._list = this._list.concat(other._value._list);
+    validate_len(this);
+    return this;
+  },
 
-    // extend list with another list
-    extend: function(other)
-    {
-        if (other.type !== "list") {
-            throw new Errors.RuntimeError("List 'extend()' expecting another list as param ('" + other.type + "' given).");
-        }
-        this._list = this._list.concat(other._value._list);
-        validate_len(this);
-        return this;
-    },
+  // return first index found of value
+  index: function (item) {
+    // find item
+    for (var i = 0; i < this._list.length; ++i) {
+      if (Variable.equal(this._list[i], item)) {
+        return i;
+      }
+    }
 
-    // return first index found of value
-    index: function(item)
-    {
-        // find item
-        for (var i = 0; i < this._list.length; ++i)
-        {
-            if (Variable.equal(this._list[i], item)) {
-                return i
-            }
-        }
+    // not found - return -1
+    return -1;
+  },
 
-        // not found - return -1
-        return -1;
-    },
+  // insert a value to a specific index
+  insert: function (item, position) {
+    // insert and return item
+    this._list.splice(position, 0, item);
+    validate_len(this);
+    return item;
+  },
 
-    // insert a value to a specific index
-    insert: function(item, position)
-    {
-        // insert and return item
-        this._list.splice(position, 0, item);
-        validate_len(this);
-        return item;
-    },
+  // join function
+  join: function (str) {
+    var connector = (str ? str._value : str) || undefined;
+    return this._list
+      .map(function (x) {
+        return x._value;
+      })
+      .join(connector);
+  },
 
-    // join function
-    join: function(str)
-    {
-        var connector = (str ? str._value : str) || undefined;
-        return this._list.map(function(x) {return x._value;}).join(connector);
-    },
+  // pop a value from list
+  pop: function (index) {
+    // for return value
+    var ret;
 
-    // pop a value from list
-    pop: function(index)
-    {
-        // for return value
-        var ret;
+    // pop without value (last index)
+    if (index === undefined) {
+      ret = this._list.pop();
+    }
+    // pop specific index
+    else {
+      ret = this._list.splice(index, 1)[0];
+    }
+    // invalid index? return None
+    if (ret === undefined) {
+      return new Variable(this._context, null);
+    }
 
-        // pop without value (last index)
-        if (index === undefined) {
-            ret = this._list.pop();
-        }
-        // pop specific index
-        else {
-            ret = this._list.splice(index, 1)[0];
-        }
-        // invalid index? return None
-        if (ret === undefined) {
-            return new Variable(this._context, null);
-        }
+    // return the value we poped
+    return ret;
+  },
 
-        // return the value we poped
-        return ret;
-    },
+  // shift a value from list
+  shift: function () {
+    return this._list.shift() || new Variable(this._context, null);
+  },
 
-    // shift a value from list
-    shift: function()
-    {
-        return this._list.shift() || new Variable(this._context, null);
-    },
+  // remove first occurrence of value.
+  remove: function (item) {
+    // get item index in list
+    var index = this.index(item);
 
-    // remove first occurrence of value.
-    remove: function(item)
-    {
-        // get item index in list
-        var index = this.index(item);
+    // if found remove it
+    if (index !== -1) {
+      this._list.splice(index, 1);
+      return true;
+    }
 
-        // if found remove it
-        if (index !== -1)
-        {
-            this._list.splice(index, 1);
-            return true;
-        }
+    // not found - didn't remove
+    return false;
+  },
 
-        // not found - didn't remove
-        return false;
-    },
+  // reverse the list
+  reverse: function () {
+    this._list.reverse();
+  },
 
-    // reverse the list
-    reverse: function()
-    {
-        this._list.reverse();
-    },
+  // slice the list and return a sub list
+  slice: function (start, end) {
+    var sub = this._list.slice(start, end);
+    return new List(this._context, sub);
+  },
 
-    // slice the list and return a sub list
-    slice: function(start, end)
-    {
-        var sub = this._list.slice(start, end);
-        return new List(this._context, sub);
-    },
+  // sort list
+  sort: function () {
+    this._list.sort();
+  },
 
-    // sort list
-    sort: function()
-    {
-        this._list.sort();
-    },
+  // return n'th item
+  at: function (index) {
+    // make sure integer
+    if (index.type !== "number") {
+      throw new Errors.RuntimeError(
+        "List 'at()' must receive a number as param (got '" +
+          index.type +
+          "' instead)."
+      );
+    }
 
-    // return n'th item
-    at: function(index) {
+    // convert to int
+    index = Math.round(index._value);
 
-        // make sure integer
-        if (index.type !== "number") {
-            throw new Errors.RuntimeError("List 'at()' must receive a number as param (got '" + index.type + "' instead).");
-        }
+    // handle negatives
+    if (index < 0) {
+      index = this._list.length + index;
+    }
 
-        // convert to int
-        index = Math.round(index._value);
+    // make sure in range
+    if (index >= this._list.length) {
+      throw new Errors.RuntimeError("Index out of list range!");
+    }
 
-        // handle negatives
-        if (index < 0) {index = this._list.length + index;}
+    // return item
+    return this._list[index];
+  },
 
-        // make sure in range
-        if (index >= this._list.length) {
-            throw new Errors.RuntimeError("Index out of list range!");
-        }
+  forEach: function (callback) {
+    if (callback.type !== "function")
+      throw new Errors.RuntimeError("Callback has to be function");
 
-        // return item
-        return this._list[index];
-    },
-}
+    this._list.forEach(function (e, i) {
+      this._context._interpreter.callFunction(callback, [e, i, this]);
+    }, this);
+  },
+
+  map: function (callback) {
+    if (callback.type !== "function")
+      throw new Errors.RuntimeError("Callback has to be function");
+
+    var nl = new List(this._context, []);
+
+    this._list.forEach(function (e, i) {
+      apiFuncs.append.call(
+        nl,
+        new Variable(
+          this._context,
+          this._context._interpreter.callFunction(callback, [e, i, this])
+        )
+      );
+    }, this);
+
+    return nl;
+  },
+
+  filter: function (callback) {
+    if (callback.type !== "function")
+      throw new Errors.RuntimeError("Callback has to be function");
+
+    var nl = new List(this._context, []);
+
+    this._list.forEach(function (e, i) {
+      if (callback._context._interpreter.callFunction(callback, [e, i, this]))
+        apiFuncs.append.call(nl, new Variable(this._context, e));
+    }, this);
+
+    return nl;
+  },
+
+  reduce: function (callback, startValue) {
+    if (callback.type !== "function")
+      throw new Errors.RuntimeError("Callback has to be function");
+    var list = this;
+
+    return this._list.reduce(function (e, cv, index) {
+      return callback._context._interpreter.callFunction(callback, [
+        e,
+        cv,
+        index,
+        list,
+      ]);
+    }, startValue);
+  },
+
+  every: function (callback) {
+    if (callback.type !== "function")
+      throw new Errors.RuntimeError("Callback has to be function");
+
+    return this._list.every(function (e, index) {
+      return callback._context._interpreter.callFunction(callback, [
+        e,
+        index,
+        this,
+      ]);
+    }, this);
+  },
+
+  some: function (callback) {
+    if (callback.type !== "function")
+      throw new Errors.RuntimeError("Callback has to be function");
+
+    return this._list.some(function (e, index) {
+      return callback._context._interpreter.callFunction(callback, [
+        e,
+        index,
+        this,
+      ]);
+    }, this);
+  },
+
+  find: function (callback) {
+    if (callback.type !== "function")
+      throw new Errors.RuntimeError("Callback has to be function");
+
+    return this._list.find(function (e, index) {
+      return callback._context._interpreter.callFunction(callback, [
+        e,
+        index,
+        this,
+      ]);
+    }, this);
+  },
+};
 
 // List class
 var List = Class(_Object, {
+  // Object constructor
+  // @param context - context of program currently executed.
+  // @param args - starting list
+  constructor: function (context, args) {
+    // call parent constructor
+    List.$super.call(this, context);
 
-    // Object constructor
-    // @param context - context of program currently executed.
-    // @param args - starting list
-    constructor: function(context, args)
-    {
-        // call parent constructor
-        List.$super.call(this, context);
+    // make sure all items are variables
+    args = Variable.makeVariables(context, args);
 
-        // make sure all items are variables
-        args = Variable.makeVariables(context, args);
+    // set list
+    this._list = args ? args.slice(0) : [];
+    validate_len(this);
+  },
 
-        // set list
-        this._list = args ? args.slice(0) : [];
-        validate_len(this);
-    },
+  // iterate over object components
+  forEach: function (callback, obj) {
+    for (var i = 0; i < this._list.length; ++i) {
+      if (callback.call(obj, this._list[i]) === false) {
+        return;
+      }
+    }
+  },
 
-    // iterate over object components
-    forEach: function(callback, obj) {
-        for (var i = 0; i < this._list.length; ++i) {
-            if (callback.call(obj, this._list[i]) === false) {
-                return;
-            }
-        }
-    },
+  // list api
+  api: {
+    clone: BuiltinFunc.create(apiFuncs.clone, 0, 0, false),
+    empty: BuiltinFunc.create(apiFuncs.empty, 0, 0, false),
+    to_set: BuiltinFunc.create(apiFuncs.to_set, 0, 0, false),
+    len: BuiltinFunc.create(apiFuncs.len, 0, 0, false),
+    shift: BuiltinFunc.create(apiFuncs.shift, 0, 0, false),
+    append: BuiltinFunc.create(apiFuncs.append, 1, 0, false),
+    has: BuiltinFunc.create(apiFuncs.has, 1, 0, false),
+    clear: BuiltinFunc.create(apiFuncs.clear, 0, 0, false),
+    count: BuiltinFunc.create(apiFuncs.count, 1, 0, false),
+    extend: BuiltinFunc.create(apiFuncs.extend, 1, 0, false),
+    index: BuiltinFunc.create(apiFuncs.index, 1, 0, false),
+    insert: BuiltinFunc.create(apiFuncs.insert, 2, 0, false),
+    pop: BuiltinFunc.create(apiFuncs.pop, 0, 1, false),
+    remove: BuiltinFunc.create(apiFuncs.remove, 1, 0, false),
+    reverse: BuiltinFunc.create(apiFuncs.reverse, 0, 0, false),
+    slice: BuiltinFunc.create(apiFuncs.slice, 1, 1, false),
+    join: BuiltinFunc.create(apiFuncs.join, 0, 1, false),
+    sort: BuiltinFunc.create(apiFuncs.sort, 0, 0, false),
+    at: BuiltinFunc.create(apiFuncs.at, 1, 0, false),
+    forEach: BuiltinFunc.create(apiFuncs.forEach, 1, 0, false),
+    map: BuiltinFunc.create(apiFuncs.map, 1, 0, false),
+    filter: BuiltinFunc.create(apiFuncs.filter, 1, 0, false),
+    reduce: BuiltinFunc.create(apiFuncs.reduce, 2, 0, false),
+    every: BuiltinFunc.create(apiFuncs.every, 1, 0, false),
+    some: BuiltinFunc.create(apiFuncs.some, 1, 0, false),
+    find: BuiltinFunc.create(apiFuncs.find, 1, 0, false),
+  },
 
-    // list api
-    api: {
-        clone: BuiltinFunc.create(apiFuncs.clone, 0, 0, false),
-        empty: BuiltinFunc.create(apiFuncs.empty, 0, 0, false),
-        to_set: BuiltinFunc.create(apiFuncs.to_set, 0, 0, false),
-        len: BuiltinFunc.create(apiFuncs.len, 0, 0, false),
-        shift: BuiltinFunc.create(apiFuncs.shift, 0, 0, false),
-        append: BuiltinFunc.create(apiFuncs.append, 1, 0, false),
-        has: BuiltinFunc.create(apiFuncs.has, 1, 0, false),
-        clear: BuiltinFunc.create(apiFuncs.clear, 0, 0, false),
-        count: BuiltinFunc.create(apiFuncs.count, 1, 0, false),
-        extend: BuiltinFunc.create(apiFuncs.extend, 1, 0, false),
-        index: BuiltinFunc.create(apiFuncs.index, 1, 0, false),
-        insert: BuiltinFunc.create(apiFuncs.insert, 2, 0, false),
-        pop: BuiltinFunc.create(apiFuncs.pop, 0, 1, false),
-        remove: BuiltinFunc.create(apiFuncs.remove, 1, 0, false),
-        reverse: BuiltinFunc.create(apiFuncs.reverse, 0, 0, false),
-        slice: BuiltinFunc.create(apiFuncs.slice, 1, 1, false),
-        join: BuiltinFunc.create(apiFuncs.join, 0, 1, false),
-        sort: BuiltinFunc.create(apiFuncs.sort, 0, 0, false),
-        at: BuiltinFunc.create(apiFuncs.at, 1, 0, false),
-    },
+  // convert to string
+  toString: function () {
+    var params = this._list.map(function (x) {
+      return x.toString();
+    });
+    return params.join(",");
+  },
 
-    // convert to string
-    toString: function()
-    {
-        var params = this._list.map(function(x) {
-            return x.toString();
-        });
-        return params.join(",");
-    },
+  // convert to repr
+  toRepr: function () {
+    return "list(" + this.toString() + ")";
+  },
 
-    // convert to repr
-    toRepr: function()
-    {
-        return "list(" + this.toString() + ")";
-    },
+  // convert to a native javascript object
+  toNativeJs: function () {
+    var ret = [];
+    for (var i = 0; i < this._list.length; ++i) {
+      ret.push(this._list[i].toNativeJs());
+    }
+    return ret;
+  },
 
-    // convert to a native javascript object
-    toNativeJs: function()
-    {
-        var ret = [];
-        for (var i = 0; i < this._list.length; ++i) {
-            ret.push(this._list[i].toNativeJs());
-        }
-        return ret;
-    },
+  // object identifier
+  name: "list",
 
-    // object identifier
-    name: "list",
-
-    // object type
-    type: "list",
+  // object type
+  type: "list",
 });
 
 // init set builtint api
@@ -2530,7 +2713,8 @@ _Object.initBuiltinApi(List);
 module.exports = List;
 
 // require Set (do it in the end to prevent require loop)
-var _Set = require('./set');
+var _Set = require("./set");
+
 },{"./../dependencies/jsface":24,"./../errors":28,"./builtin_func":9,"./object":17,"./set":19,"./variable":22}],16:[function(require,module,exports){
 "use strict";
 
@@ -3305,16 +3489,16 @@ module.exports = api;
 "use strict";
 
 /**
-* Represent a value in program's memory. Everything inside the running environment is stored inside variables.
-*
-* Author: Ronen Ness.
-* Since: 2016
-*/
+ * Represent a value in program's memory. Everything inside the running environment is stored inside variables.
+ *
+ * Author: Ronen Ness.
+ * Since: 2016
+ */
 
 // include jsface for classes
 var jsface = require("./../dependencies/jsface"),
-    Class  = jsface.Class,
-    extend = jsface.extend;
+  Class = jsface.Class,
+  extend = jsface.extend;
 
 // include errors
 var Errors = require("./../errors");
@@ -3330,424 +3514,416 @@ var simpleTypes = Utils.toSet(["string", "number", "boolean", "none"]);
 
 // Variable class
 var Variable = Class({
+  // variable constructor
+  // @param context - context of program currently executed.
+  // @param value - variable value - must be raw, native type. NOT an expression.
+  constructor: function (context, value) {
+    // store context and arguments
+    this._context = context;
 
-    // variable constructor
-    // @param context - context of program currently executed.
-    // @param value - variable value - must be raw, native type. NOT an expression.
-    constructor: function(context, value)
-    {
-        // store context and arguments
-        this._context = context;
-
+    // set type
+    // special case for null and undefined
+    if (value === null || value === undefined) {
+      value = null; // <-- in case we got "undefined" convert it to null.
+      this.type = "none";
+      this.isSimple = true;
+      this._estimatedSize = 1;
+    }
+    // if its an object set type
+    else {
+      // function
+      if (value.isFunction) {
+        this.type = "function";
+        this.isSimple = false;
+        this._estimatedSize = 4;
+      }
+      // NaN
+      else if (typeof value === "number" && isNaN(value)) {
+        this.type = "NaN";
+        this.isSimple = false;
+        this._estimatedSize = 4;
+      }
+      // if object and have type
+      else if (value.type) {
+        this.type = value.type;
+        this.isSimple = false;
+        this._estimatedSize = 4;
+      }
+      // any other object
+      else {
         // set type
-        // special case for null and undefined
-        if (value === null || value === undefined)
-        {
-            value = null; // <-- in case we got "undefined" convert it to null.
-            this.type = "none";
-            this.isSimple = true;
-            this._estimatedSize = 1;
+        this.type = typeof value;
+
+        // special case - if string - remove quotes
+        if (this.type === "string") {
+          // make sure don't exceed max string length
+          var maxLen = this._context._interpreter._flags.maxStringLen;
+          if (maxLen && value.length > maxLen) {
+            throw new Errors.ExceedMemoryLimit(
+              "String exceeded length limit of " + maxLen + "!"
+            );
+          }
+
+          // set estimated size
+          this._estimatedSize = value.length;
         }
-        // if its an object set type
-        else
-        {
-            // function
-            if (value.isFunction) {
-                this.type = "function";
-                this.isSimple = false;
-                this._estimatedSize = 4;
-            }
-            // NaN
-            else if (typeof value === "number" && isNaN(value))
-            {
-                this.type = "NaN";
-                this.isSimple = false;
-                this._estimatedSize = 4;
-            }
-            // if object and have type
-            else if (value.type)
-            {
-                this.type = value.type;
-                this.isSimple = false;
-                this._estimatedSize = 4;
-            }
-            // any other object
-            else {
-
-                // set type
-                this.type = typeof value;
-
-                // special case - if string - remove quotes
-                if (this.type === "string") {
-
-                    // make sure don't exceed max string length
-                    var maxLen = this._context._interpreter._flags.maxStringLen;
-                    if (maxLen && value.length > maxLen) {
-                        throw new Errors.ExceedMemoryLimit("String exceeded length limit of " + maxLen + "!");
-                    }
-
-                    // set estimated size
-                    this._estimatedSize = value.length;
-                }
-                // for any other simple type estimated size is 1 byte
-                else {
-                    this._estimatedSize = 1;
-                }
-
-                // its a simple type
-                this.isSimple = true;
-            }
+        // for any other simple type estimated size is 1 byte
+        else {
+          this._estimatedSize = 1;
         }
 
-        // add API based on variable type
-        this.api = APIs[this.type];
+        // its a simple type
+        this.isSimple = true;
+      }
+    }
 
-        // set scope data
-        this._scopeData = {};
+    // add API based on variable type
+    this.api = APIs[this.type];
 
-        // store value
-        this._value = value;
+    // set scope data
+    this._scopeData = {};
+
+    // store value
+    this._value = value;
+  },
+
+  // set scope-related data of this variable
+  setScopeData: function (scope, name, readonly) {
+    this._scopeData = {
+      scope: scope,
+      name: name,
+      readonly: readonly,
+    };
+  },
+
+  // some static functions
+  $static: {
+    // return if given value is a variable instance
+    isVariable: function (val) {
+      return val && val.constructor === Variable;
     },
 
-    // set scope-related data of this variable
-    setScopeData: function(scope, name, readonly) {
-        this._scopeData = {
-            scope: scope,
-            name: name,
-            readonly: readonly,
-        };
-    },
+    // check if two variables are equal
+    equal: function (a, b) {
+      // if same object return true
+      if (a === b) {
+        return true;
+      }
 
-    // some static functions
-    $static: {
+      // first get types and check if different types
+      var typeA = a.type;
+      var typeB = b.type;
+      if (typeA !== typeB) {
+        return false;
+      }
 
-        // return if given value is a variable instance
-        isVariable: function(val) {
-            return val && val.constructor === Variable;
-        },
+      // get values
+      a = a._value;
+      b = b._value;
 
-        // check if two variables are equal
-        equal: function(a, b) {
+      // compare based on type
+      switch (typeA) {
+        // special case - NaN (remember we checked types before, so we don't need to check if both are NaN).
+        // why we need this? because in JS if you do NaN === NaN the result is false, and I want to fix that.
+        case "NaN":
+          return true;
 
-            // if same object return true
-            if (a === b) {
-                return true;
-            }
-
-            // first get types and check if different types
-            var typeA = a.type;
-            var typeB = b.type;
-            if (typeA !== typeB) {return false;}
-
-            // get values
-            a = a._value;
-            b = b._value;
-
-            // compare based on type
-            switch (typeA) {
-
-                // special case - NaN (remember we checked types before, so we don't need to check if both are NaN).
-                // why we need this? because in JS if you do NaN === NaN the result is false, and I want to fix that.
-                case "NaN":
-                    return true;
-
-                // if list compare lists
-                case "list":
-                    // if different length return false
-                    if (a.len() !== b.len()) {return false;}
-
-                    // iterate over items and compare recursively
-                    for (var i = 0; i < a._list.length; ++i) {
-                        if (!Variable.equal(a._list[i], b._list[i])) {
-                            return false;
-                        }
-                    }
-
-                    // if got here it means they are equal
-                    return true;
-
-                // if dict compare as dicts
-                case "dict":
-                    // get keys
-                    var ak = a.keys(); var bk = b.keys();
-
-                    // different length? not equal
-                    if (ak.len() !== bk.len()) {return false;}
-
-                    // iterate over keys and compare recursively
-                    for (var i = 0; i < ak._list.length; ++i) {
-
-                        var key = ak._list[i]._value;
-                        if (!Variable.equal(a._dict[key], b._dict[key])) {
-                            return false;
-                        }
-                    }
-
-                    // if got here it means they are equal
-                    return true;
-
-                // if set compare sets
-                case "set":
-                        // if different length return false
-                        if (a.len() !== b.len()) {return false;}
-
-                        // convert both sets to lists
-                        a = a.to_list(); b = b.to_list();
-
-                        // iterate over items and compare recursively
-                        for (var i = 0; i < a._list.length; ++i) {
-                            if (!Variable.equal(a._list[i], b._list[i])) {
-                                return false;
-                            }
-                        }
-
-                        // if got here it means they are equal
-                        return true;
-
-                // for default types just compare
-                default:
-                    return a === b;
-            };
-        },
-
-        // check if two variables are the same (like 'is' in python)
-        is: function(a, b) {
-
-            // if same object return true
-            if (a === b) {
-                return true;
-            }
-
-            // first get types and check if different types
-            var typeA = a.type;
-            var typeB = b.type;
-            if (typeA !== typeB) {return false;}
-
-            // get values
-            a = a._value;
-            b = b._value;
-
-            // special case - NaN (remember we checked types before, so we don't need to check if both are NaN).
-            // why we need this? because in JS if you do NaN === NaN the result is false, and I want to fix that.
-            if (typeA === "NaN") {return true;}
-
-            // if its an object, check if the same instance
-            if (a && a.api)
-            {
-                return a === b;
-            }
-
-            // for native types return comparison
-            return a === b;
-        },
-
-        // make sure given value is a variable (or a list of variables, if array is given).
-        // note: this can either handle a single value or an array. if array, it will convert all items inside to variables.
-        // @param forceCreateNew - if true, and val is already a variable, clone it to a new variable.
-        makeVariables: function(context, val, forceCreateNew) {
-
-            // if array convert all items into variable
-            if (val instanceof Array) {
-
-                // length is 0? stop here!
-                if (val.length === 0) {return val;}
-
-                // convert to variables and return
-                for (var i = 0; i < val.length; ++i) {
-                    val[i] = Variable.makeVariables(context, val[i], forceCreateNew);
-                }
-
-                // return value
-                return val;
-            }
-
-            // if already variable stop here..
-            if (val && val.constructor === Variable)
-            {
-                if (forceCreateNew) {
-                    return new Variable(context, val._value);
-                }
-                return val;
-            }
-
-            // convert to variable
-            return new Variable(context, val);
-        },
-
-
-        // similar to makeVariables but slightly different in a way that it will convert arrays into Adder lists, Sets
-        // into adder Sets, etc..
-        makeAdderObjects: function(context, val, forceCreateNew) {
-
-            // if already a variable stop here..
-            if (val && val.constructor === Variable)
-            {
-                // unless forced to create a new var, in which case create a copy
-                if (forceCreateNew) {
-                    return new Variable(context, val._value);
-                }
-                return val;
-            }
-            // if array convert all items inside into adder objects
-            else if (val instanceof Array)
-            {
-                for (var i = 0; i < val.length; ++i) {
-                    val[i] = Variable.makeAdderObjects(context, val[i], forceCreateNew);
-                }
-                // create and return the new list
-                val = new _List(context, val);
-            }
-            // if a Set
-            else if (val && val.constructor === Set)
-            {
-                // create and return the new Set
-                val = new _Set(context, Utils.toArray(val));
-            }
-            // else if a dictionary convert to a dict
-            else if (val instanceof Object && !val.__isAdderObject)
-            {
-
-                // convert to variables and return
-                for (var key in val) {
-                    val[key] = Variable.makeAdderObjects(context, val[key], forceCreateNew);
-                }
-
-                // create and return the new dictionary
-                val = new _Dict(context, val);
-            }
-
-            // now convert to a variable and return
-            return new Variable(context, val);
-        },
-    },
-
-    // get variable value.
-    getValue: function()
-    {
-        return this._value;
-    },
-
-    // get variable type
-    getType: function()
-    {
-        return this.type;
-    },
-
-    // delete this variable
-    deleteSelf: function()
-    {
-        // if no scope
-        if (!this._scopeData.scope) {
-            throw new Errors.RuntimeError("Cannot delete object '" + this.toString() + "'!");
-        }
-
-        // remove self from context and reset scope data
-        this._context.remove(this._scopeData.name);
-        this._scopeData = {};
-
-    },
-
-    // implement the 'in' operator, eg if val is inside this
-    has: function(val)
-    {
-        // first check if have value
-        if (this._value === null || this._value === undefined) {
+        // if list compare lists
+        case "list":
+          // if different length return false
+          if (a.len() !== b.len()) {
             return false;
-        }
+          }
 
-        // now check if this var have 'has()' implemented internally. if so, use it.
-        if (this._value.has) {
-            return this._value.has(val);
-        }
+          // iterate over items and compare recursively
+          for (var i = 0; i < a._list.length; ++i) {
+            if (!Variable.equal(a._list[i], b._list[i])) {
+              return false;
+            }
+          }
 
-        // make sure value to check is not a variable
-        if (val && val.getValue) {
-            val = val._value;
-        }
+          // if got here it means they are equal
+          return true;
 
-        // if has() is not supported, fallback to simple string indexOf
-        return String(this._value).indexOf(val) !== -1;
+        // if dict compare as dicts
+        case "dict":
+          // get keys
+          var ak = a.keys();
+          var bk = b.keys();
+
+          // different length? not equal
+          if (ak.len() !== bk.len()) {
+            return false;
+          }
+
+          // iterate over keys and compare recursively
+          for (var i = 0; i < ak._list.length; ++i) {
+            var key = ak._list[i]._value;
+            if (!Variable.equal(a._dict[key], b._dict[key])) {
+              return false;
+            }
+          }
+
+          // if got here it means they are equal
+          return true;
+
+        // if set compare sets
+        case "set":
+          // if different length return false
+          if (a.len() !== b.len()) {
+            return false;
+          }
+
+          // convert both sets to lists
+          a = a.to_list();
+          b = b.to_list();
+
+          // iterate over items and compare recursively
+          for (var i = 0; i < a._list.length; ++i) {
+            if (!Variable.equal(a._list[i], b._list[i])) {
+              return false;
+            }
+          }
+
+          // if got here it means they are equal
+          return true;
+
+        // for default types just compare
+        default:
+          return a === b;
+      }
     },
 
-    // convert variable to a native javascript object
-    toNativeJs: function()
-    {
-        // get value
-        var val = this._value;
+    // check if two variables are the same (like 'is' in python)
+    is: function (a, b) {
+      // if same object return true
+      if (a === b) {
+        return true;
+      }
 
-        // if its null etc.
-        if (!val) {
-            return val;
+      // first get types and check if different types
+      var typeA = a.type;
+      var typeB = b.type;
+      if (typeA !== typeB) {
+        return false;
+      }
+
+      // get values
+      a = a._value;
+      b = b._value;
+
+      // special case - NaN (remember we checked types before, so we don't need to check if both are NaN).
+      // why we need this? because in JS if you do NaN === NaN the result is false, and I want to fix that.
+      if (typeA === "NaN") {
+        return true;
+      }
+
+      // if its an object, check if the same instance
+      if (a && a.api) {
+        return a === b;
+      }
+
+      // for native types return comparison
+      return a === b;
+    },
+
+    // make sure given value is a variable (or a list of variables, if array is given).
+    // note: this can either handle a single value or an array. if array, it will convert all items inside to variables.
+    // @param forceCreateNew - if true, and val is already a variable, clone it to a new variable.
+    makeVariables: function (context, val, forceCreateNew) {
+      // if array convert all items into variable
+      if (val instanceof Array) {
+        // length is 0? stop here!
+        if (val.length === 0) {
+          return val;
         }
 
-        // if value is an object with its own to toNativeJs function, call it.
-        if (val.toNativeJs) {
-            return val.toNativeJs();
+        // convert to variables and return
+        for (var i = 0; i < val.length; ++i) {
+          val[i] = Variable.makeVariables(context, val[i], forceCreateNew);
         }
 
-        // special case for dictionaries
-        if (val.isFunction) {
-            return val.func || val.__imp;
-        }
-
-        // if a simple value return the value itself
+        // return value
         return val;
-    },
+      }
 
-    // convert to repr
-    toRepr: function()
-    {
-        // get value
-        var val = this._value;
-
-        // return string based on type
-        switch (this.type)
-        {
-            case "string":
-                return '"' + val + '"';
-            case "number":
-                return String(val);
-            case "none":
-                return LanguageDefs.keywords['null'];
-            case "boolean":
-                return LanguageDefs.keywords[String(val)];
-            case "function":
-                return val.toRepr();
-            default:
-                // check if value got a string function of its own
-                if (val && val.toRepr) {
-                    return val.toRepr();
-                }
-                // if not just convert to a string and return
-                return String(val);
+      // if already variable stop here..
+      if (val && val.constructor === Variable) {
+        if (forceCreateNew) {
+          return new Variable(context, val._value);
         }
+        return val;
+      }
+
+      // convert to variable
+      return new Variable(context, val);
     },
 
-    // convert to string
-    toString: function()
-    {
-        // return string based on type
-        switch (this.type)
-        {
-            case "string":
-                return this._value;
-            case "number":
-                return String(this._value);
-            case "none":
-                return "";
-            case "boolean":
-                return LanguageDefs.keywords[String(this._value)];
-            case "function":
-                return this._value.toString();
-            default:
-                // check if value got a string function of its own
-                if (this._value && this._value.toString) {
-                    return this._value.toString();
-                }
-                // if not just convert to a string and return
-                return String(this._value);
+    // similar to makeVariables but slightly different in a way that it will convert arrays into Adder lists, Sets
+    // into adder Sets, etc..
+    makeAdderObjects: function (context, val, forceCreateNew) {
+      // if already a variable stop here..
+      if (val && val.constructor === Variable) {
+        // unless forced to create a new var, in which case create a copy
+        if (forceCreateNew) {
+          return new Variable(context, val._value);
         }
+        return val;
+      }
+      // if array convert all items inside into adder objects
+      else if (val instanceof Array) {
+        var val2 = forceCreateNew ? [] : val;
+        for (var i = 0; i < val.length; ++i) {
+          val2[i] = Variable.makeAdderObjects(context, val[i], forceCreateNew);
+        }
+        // create and return the new list
+        val = new _List(context, val2);
+      }
+      // if a Set
+      else if (val && val.constructor === Set) {
+        // create and return the new Set
+        val = new _Set(context, Utils.toArray(val));
+      }
+      // else if a dictionary convert to a dict
+      else if (val instanceof Object && !val.__isAdderObject) {
+        var val2 = forceCreateNew ? {} : val;
+        // convert to variables and return
+        for (var key in val) {
+          val2[key] = Variable.makeAdderObjects(
+            context,
+            val[key],
+            forceCreateNew
+          );
+        }
+
+        // create and return the new dictionary
+        val = new _Dict(context, val2);
+      }
+
+      // now convert to a variable and return
+      return new Variable(context, val);
     },
+  },
+
+  // get variable value.
+  getValue: function () {
+    return this._value;
+  },
+
+  // get variable type
+  getType: function () {
+    return this.type;
+  },
+
+  // delete this variable
+  deleteSelf: function () {
+    // if no scope
+    if (!this._scopeData.scope) {
+      throw new Errors.RuntimeError(
+        "Cannot delete object '" + this.toString() + "'!"
+      );
+    }
+
+    // remove self from context and reset scope data
+    this._context.remove(this._scopeData.name);
+    this._scopeData = {};
+  },
+
+  // implement the 'in' operator, eg if val is inside this
+  has: function (val) {
+    // first check if have value
+    if (this._value === null || this._value === undefined) {
+      return false;
+    }
+
+    // now check if this var have 'has()' implemented internally. if so, use it.
+    if (this._value.has) {
+      return this._value.has(val);
+    }
+
+    // make sure value to check is not a variable
+    if (val && val.getValue) {
+      val = val._value;
+    }
+
+    // if has() is not supported, fallback to simple string indexOf
+    return String(this._value).indexOf(val) !== -1;
+  },
+
+  // convert variable to a native javascript object
+  toNativeJs: function () {
+    // get value
+    var val = this._value;
+
+    // if its null etc.
+    if (!val) {
+      return val;
+    }
+
+    // if value is an object with its own to toNativeJs function, call it.
+    if (val.toNativeJs) {
+      return val.toNativeJs();
+    }
+
+    // special case for dictionaries
+    if (val.isFunction) {
+      return val.func || val.__imp;
+    }
+
+    // if a simple value return the value itself
+    return val;
+  },
+
+  // convert to repr
+  toRepr: function () {
+    // get value
+    var val = this._value;
+
+    // return string based on type
+    switch (this.type) {
+      case "string":
+        return '"' + val + '"';
+      case "number":
+        return String(val);
+      case "none":
+        return LanguageDefs.keywords["null"];
+      case "boolean":
+        return LanguageDefs.keywords[String(val)];
+      case "function":
+        return val.toRepr();
+      default:
+        // check if value got a string function of its own
+        if (val && val.toRepr) {
+          return val.toRepr();
+        }
+        // if not just convert to a string and return
+        return String(val);
+    }
+  },
+
+  // convert to string
+  toString: function () {
+    // return string based on type
+    switch (this.type) {
+      case "string":
+        return this._value;
+      case "number":
+        return String(this._value);
+      case "none":
+        return "";
+      case "boolean":
+        return LanguageDefs.keywords[String(this._value)];
+      case "function":
+        return this._value.toString();
+      default:
+        // check if value got a string function of its own
+        if (this._value && this._value.toString) {
+          return this._value.toString();
+        }
+        // if not just convert to a string and return
+        return String(this._value);
+    }
+  },
 });
 
 // export the Executable class
@@ -3760,8 +3936,9 @@ var _Dict = require("./dict");
 
 // different APIs for different variable types
 var APIs = {
-    'string': require("./string_api"),
+  string: require("./string_api"),
 };
+
 },{"./../dependencies/jsface":24,"./../errors":28,"./../language/defs":34,"./../utils":79,"./dict":11,"./list":15,"./set":19,"./string_api":21}],23:[function(require,module,exports){
 "use strict";
 
@@ -3782,17 +3959,17 @@ module.exports = {
 "use strict";
 
 /**
-* The main API class that spawn programs and load code.
-* This is the main class you need to use.
-*
-* Author: Ronen Ness.
-* Since: 2016
-*/
+ * The main API class that spawn programs and load code.
+ * This is the main class you need to use.
+ *
+ * Author: Ronen Ness.
+ * Since: 2016
+ */
 
 // include jsface for classes
 var jsface = require("./../dependencies/jsface"),
-    Class  = jsface.Class,
-    extend = jsface.extend;
+  Class = jsface.Class,
+  extend = jsface.extend;
 
 // include the alternative console
 var Console = require("./../console");
@@ -3819,263 +3996,272 @@ var uniqueObjectName = 0;
 
 // the environment class.
 var Environment = Class({
+  // the environment is a singleton class
+  $singleton: true,
 
-    // the environment is a singleton class
-    $singleton: true,
+  // add access to errors and utils
+  Errors: Errors,
+  Utils: Utils,
 
-    // add access to errors and utils
-    Errors: Errors,
-    Utils: Utils,
+  // Environment constructor.
+  // @param params is a dictionary with all environment params. contains:
+  //      flags - compiler and interpreter flags.
+  //      modules - a list of modules to load by default. Can also be ['ALL'] to load all builtin modules.
+  //      outputFunc - a function to handle output from script execution (print calls).
+  //      showDebugConsole - if true, will output debug prints to console.
+  init: function (params) {
+    // default params
+    params = params || {};
 
-    // Environment constructor.
-    // @param params is a dictionary with all environment params. contains:
-    //      flags - compiler and interpreter flags.
-    //      modules - a list of modules to load by default. Can also be ['ALL'] to load all builtin modules.
-    //      outputFunc - a function to handle output from script execution (print calls).
-    //      showDebugConsole - if true, will output debug prints to console.
-    init: function(params)
-    {
-        // default params
-        params = params || {};
+    // store interpreter flags
+    this._flags = params.flags || {};
+    this._modules = params.modules || ["SAFE"];
+    this._outputFunc = params.outputFunc || null;
 
-        // store interpreter flags
-        this._flags = params.flags || {};
-        this._modules = params.modules || ["SAFE"];
-        this._outputFunc = params.outputFunc || null;
+    // all custom modules
+    this._customModules = {};
 
-        // all custom modules
-        this._customModules = {};
+    // set debug console
+    if (params.showDebugConsole) {
+      Console.bindToNativeConsole();
+    }
 
-        // set debug console
-        if (params.showDebugConsole) {
-            Console.bindToNativeConsole();
-        }
+    // show basic info
+    Console.info("Created a new environment!", this._flags, this._modules);
 
-        // show basic info
-        Console.info("Created a new environment!", this._flags, this._modules);
+    // create the compiler instance
+    this._compiler = new Compiler(this._flags);
+  },
 
-        // create the compiler instance
-        this._compiler = new Compiler(this._flags);
-    },
+  // compile code and return the compiled code
+  compile: function (code) {
+    return this._compiler.compile(code);
+  },
 
-    // compile code and return the compiled code
-    compile: function(code) {
-        return this._compiler.compile(code);
-    },
+  // spawn a program from compiled code
+  newProgram: function (compiledCode) {
+    // create and return the new program
+    var program = new Program(
+      compiledCode,
+      this._modules,
+      this._flags,
+      this._outputFunc
+    );
 
-    // spawn a program from compiled code
-    newProgram: function(compiledCode) {
+    // add custom modules
+    for (var key in this._customModules) {
+      program.addModule(key, this._customModules[key]);
+    }
 
-        // create and return the new program
-        var program = new Program(compiledCode, this._modules, this._flags, this._outputFunc);
+    // return the newly created program
+    return program;
+  },
 
-        // add custom modules
-        for (var key in this._customModules) {
-            program.addModule(key, this._customModules[key]);
-        }
+  // convert data dictionary to a builtin function or an object
+  __toBuiltin: function (data, key, containerName) {
+    // Store original data object to update convertParamsToNativeJs
+    var oData = data;
 
-        // return the newly created program
-        return program;
-    },
+    // if its a function convert to a function instance and return
+    if (typeof data === "object" && data.func) {
+      data = Core.BuiltinFunc.create(
+        data.func,
+        data.requiredParams,
+        data.optionalParams,
+        data.deterministic || false
+      );
+      data.identifier = containerName + ".functions." + key;
 
-    // convert data dictionary to a builtin function or an object
-    __toBuiltin: function(data, key, containerName) {
+      data.convertParamsToNativeJs = true;
+      if (oData.convertParamsToNativeJs === false)
+        data.convertParamsToNativeJs = false;
 
-        // if its a function convert to a function instance and return
-        if (typeof data === "object" && data.func) {
-            data = Core.BuiltinFunc.create(data.func, data.requiredParams, data.optionalParams, data.deterministic || false);
-            data.identifier = containerName + ".functions." + key;
-            data.convertParamsToNativeJs = true;
-            return data;
-        }
+      return data;
+    }
 
-        // else just return the object
-        return data;
-    },
+    // else just return the object
+    return data;
+  },
 
-    // add a built-in function to Adder. This will only affect future programs, not already existing ones.
-    // @param data is a dictionary with the following keys:
-    //      name:           builtin function name.
-    //      func:           function to register.
-    //      requiredParams: minimum amount of required params. set null any number of params.
-    //      optionalParams: number of optional params. default to 0.
-    //      deterministic:  if for input X output will always be Y, eg the function is deterministic and predictable,
-    //                      set this to true. this will allow Adder to cache results and greatly optimize using this function.
-    //                      note: default to false.
-    addBuiltinFunction: function(data) {
+  // add a built-in function to Adder. This will only affect future programs, not already existing ones.
+  // @param data is a dictionary with the following keys:
+  //      name:           builtin function name.
+  //      func:           function to register.
+  //      requiredParams: minimum amount of required params. set null any number of params.
+  //      optionalParams: number of optional params. default to 0.
+  //      deterministic:  if for input X output will always be Y, eg the function is deterministic and predictable,
+  //                      set this to true. this will allow Adder to cache results and greatly optimize using this function.
+  //                      note: default to false.
+  addBuiltinFunction: function (data) {
+    // add to builtin functions dictionary
+    Language.Builtins.Functions[data.name] = this.__toBuiltin(
+      data,
+      data.name,
+      "custom.builtin"
+    );
+  },
 
-        // add to builtin functions dictionary
-        Language.Builtins.Functions[data.name] = this.__toBuiltin(data, data.name, "custom.builtin");
-    },
+  // remove a built-in function
+  removeBuiltinFunction: function (name) {
+    delete Language.Builtins.Functions[name];
+  },
 
-    // remove a built-in function
-    removeBuiltinFunction: function(name) {
-        delete Language.Builtins.Functions[name];
-    },
+  // create and add a builtin module.
+  // @param name - module name.
+  // @param moduleApi - a dictionary with module's API.
+  //                      to add a const value just add key value.
+  //                      to add a function add a dictionary with 'func', 'requiredParams', and 'optionalParams'.
+  //                      see addBuiltinFunction() for options.
+  //
+  // Usage example:
+  // AdderScript.addBuiltinModule("Test", {
+  //                                "foo": {
+  //                                    func: function(x) {alert(x)},
+  //                                    requiredParams: 1,
+  //                                    optionalParams: 0
+  //                                 },
+  //                                 "bar": 5,
+  //                              });
+  addBuiltinModule: function (name, moduleApi) {
+    // iterate over module api and convert to items
+    for (var key in moduleApi) {
+      // get current item and convert to builtin object
+      var curr = moduleApi[key];
+      curr = this.__toBuiltin(curr, key, name);
 
-    // create and add a builtin module.
-    // @param name - module name.
-    // @param moduleApi - a dictionary with module's API.
-    //                      to add a const value just add key value.
-    //                      to add a function add a dictionary with 'func', 'requiredParams', and 'optionalParams'.
-    //                      see addBuiltinFunction() for options.
-    //
-    // Usage example:
-    // AdderScript.addBuiltinModule("Test", {
-    //                                "foo": {
-    //                                    func: function(x) {alert(x)},
-    //                                    requiredParams: 1,
-    //                                    optionalParams: 0
-    //                                 },
-    //                                 "bar": 5,
-    //                              });
-    addBuiltinModule: function(name, moduleApi) {
+      // set back into api
+      moduleApi[key] = curr;
+    }
 
-        // iterate over module api and convert to items
-        for (var key in moduleApi) {
+    // create the module and add it
+    var CustomModule = Class(Core.Module, {
+      api: moduleApi,
+      name: name,
+      version: "1.0.0",
+    });
+    this._customModules[name] = CustomModule;
+  },
 
-            // get current item and convert to builtin object
-            var curr = moduleApi[key];
-            curr = this.__toBuiltin(curr, key, name);
+  // remove a built-in module
+  removeBuiltinModule: function (name) {
+    delete this._customModules[name];
+  },
 
-            // set back into api
-            moduleApi[key] = curr;
-        }
+  // define a built-in object (like list, dict, set..) you can return and use in your modules and builtin functions.
+  // @param name - object type name (for example when doing type(obj) this string will be returned).
+  // @param api - a dictionary with object's API.
+  //                      to add a const value just add key -> value pair.
+  //                      to add a function add a dictionary with 'func', 'requiredParams', and 'optionalParams'.
+  //                      see addBuiltinFunction() for options.
+  //
+  // Usage example:
+  // createFunc = AdderScript.defineBuiltinObject("Person", {
+  //                                "say_hello": {
+  //                                    func: function() {alert("Hello World!")},
+  //                                    requiredParams: 0,
+  //                                    optionalParams: 0
+  //                                 },
+  //                                 "race": "human",
+  //                              });
+  //
+  // to create a new object instance:
+  //      var newInstance = createFunc(this);
+  //
+  // Where 'this' is an interpreter instance.
+  //
+  // Note: by default users won't be able to create instances of this object on their own, you'll need to provide a function to generate it.
+  //
+  defineBuiltinObject: function (name, api) {
+    // iterate over module api and convert to items
+    for (var key in api) {
+      // get current item and convert to builtin object
+      var curr = api[key];
+      curr = this.__toBuiltin(curr, key, name);
 
-        // create the module and add it
-        var CustomModule = Class(Core.Module, {
-            api: moduleApi,
-            name: name,
-            version: "1.0.0",
-        });
-        this._customModules[name] = CustomModule;
-    },
+      // set back into api
+      api[key] = curr;
+    }
 
-    // remove a built-in module
-    removeBuiltinModule: function(name) {
-        delete this._customModules[name];
-    },
+    // create the object type and return the function to create new instance
+    var ret = (function () {
+      // create the object type
+      var _ObjType = Class(Core.Object, {
+        // set api
+        api: api,
 
-    // define a built-in object (like list, dict, set..) you can return and use in your modules and builtin functions.
-    // @param name - object type name (for example when doing type(obj) this string will be returned).
-    // @param api - a dictionary with object's API.
-    //                      to add a const value just add key -> value pair.
-    //                      to add a function add a dictionary with 'func', 'requiredParams', and 'optionalParams'.
-    //                      see addBuiltinFunction() for options.
-    //
-    // Usage example:
-    // createFunc = AdderScript.defineBuiltinObject("Person", {
-    //                                "say_hello": {
-    //                                    func: function() {alert("Hello World!")},
-    //                                    requiredParams: 0,
-    //                                    optionalParams: 0
-    //                                 },
-    //                                 "race": "human",
-    //                              });
-    //
-    // to create a new object instance:
-    //      var newInstance = createFunc(this);
-    //
-    // Where 'this' is an interpreter instance.
-    //
-    // Note: by default users won't be able to create instances of this object on their own, you'll need to provide a function to generate it.
-    //
-    defineBuiltinObject: function(name, api) {
+        // convert to string
+        toString: function () {
+          return this.type;
+        },
 
-        // iterate over module api and convert to items
-        for (var key in api) {
+        // convert to repr
+        toRepr: function () {
+          return "<" + this.type + ">";
+        },
 
-            // get current item and convert to builtin object
-            var curr = api[key];
-            curr = this.__toBuiltin(curr, key, name);
+        // convert to a native javascript object
+        toNativeJs: function () {
+          return this;
+        },
 
-            // set back into api
-            api[key] = curr;
-        }
+        // object identifier
+        name: name,
+        type: name,
+      });
 
-        // create the object type and return the function to create new instance
-        var ret = (function() {
+      // create the function to return the object instance
+      return function (parent) {
+        var context = parent._context || parent._interpreter._context;
+        if (!context)
+          throw "Invalid parent param, must be interpreter or program!";
+        return new _ObjType(context);
+      };
+    })();
 
-            // create the object type
-            var _ObjType = Class(Core.Object, {
+    // return the new object creation function
+    return ret;
+  },
 
-                // set api
-                api: api,
-
-                // convert to string
-                toString: function()
-                {
-                    return this.type;
-                },
-
-                // convert to repr
-                toRepr: function()
-                {
-                    return "<" + this.type + ">";
-                },
-
-                // convert to a native javascript object
-                toNativeJs: function()
-                {
-                    return this;
-                },
-
-                // object identifier
-                name: name,
-                type: name,
-            });
-
-            // create the function to return the object instance
-            return function(parent) {
-                var context = parent._context || parent._interpreter._context;
-                if (!context) throw "Invalid parent param, must be interpreter or program!";
-                return new _ObjType(context);
-            }
-        })();
-
-        // return the new object creation function
-        return ret;
-    },
-
-    // Convert a JavaScript object into a simple Adder object.
-    // You can use this to return complex objects without having to define them as builtins first. For example:
-    //
-    //   function someFunc() {
-    //        return AdderScript.toAdderObject("Target", {type: "car", hp: 5, isEnemy: true});
-    //   }
-    //
-    // and later Adder script can simple use this object's API, ie:
-    //
-    //      if target.type == "car":
-    //          print ("its a car!")
-    //
-    // @param name - object type name (for example when doing type(obj) this string will be returned).
-    // @param api - a dictionary with object's API.
-    //                      to add a const value just add key value.
-    //                      to add a function add a dictionary with 'func', 'requiredParams', and 'optionalParams'.
-    //                      see addBuiltinFunction() for options.
-    //
-    // Usage example:
-    // var retObj = AdderScript.toAdderObject("Person", {
-    //                                "say_hello": {
-    //                                    func: function() {alert("Hello World!")},
-    //                                    requiredParams: 0,
-    //                                    optionalParams: 0
-    //                                 },
-    //                                 "race": "human",
-    //                              });
-    //
-    // Note: calls defineBuiltinObject() internally.
-    //
-    toAdderObject: function(name, api, program) {
-
-        var ret = new Core.Object(program._context || program._interpreter._context, true);
-        for (var key in api) {
-            ret.setAttr(key, api[key]);
-        }
-        return ret;
-    },
-
+  // Convert a JavaScript object into a simple Adder object.
+  // You can use this to return complex objects without having to define them as builtins first. For example:
+  //
+  //   function someFunc() {
+  //        return AdderScript.toAdderObject("Target", {type: "car", hp: 5, isEnemy: true});
+  //   }
+  //
+  // and later Adder script can simple use this object's API, ie:
+  //
+  //      if target.type == "car":
+  //          print ("its a car!")
+  //
+  // @param name - object type name (for example when doing type(obj) this string will be returned).
+  // @param api - a dictionary with object's API.
+  //                      to add a const value just add key value.
+  //                      to add a function add a dictionary with 'func', 'requiredParams', and 'optionalParams'.
+  //                      see addBuiltinFunction() for options.
+  //
+  // Usage example:
+  // var retObj = AdderScript.toAdderObject("Person", {
+  //                                "say_hello": {
+  //                                    func: function() {alert("Hello World!")},
+  //                                    requiredParams: 0,
+  //                                    optionalParams: 0
+  //                                 },
+  //                                 "race": "human",
+  //                              });
+  //
+  // Note: calls defineBuiltinObject() internally.
+  //
+  toAdderObject: function (name, api, program) {
+    var ret = new Core.Object(
+      program._context || program._interpreter._context,
+      true
+    );
+    for (var key in api) {
+      ret.setAttr(key, api[key]);
+    }
+    return ret;
+  },
 });
 
 // export the Environment class
@@ -4416,19 +4602,19 @@ module.exports = require("./interpreter");
 "use strict";
 
 /**
-* The class that loads compiled code and executes it.
-*
-* Author: Ronen Ness.
-* Since: 2016
-*/
+ * The class that loads compiled code and executes it.
+ *
+ * Author: Ronen Ness.
+ * Since: 2016
+ */
 
 // include errors
 var Errors = require("./../errors");
 
 // include jsface for classes
 var jsface = require("./../dependencies/jsface"),
-    Class  = jsface.Class,
-    extend = jsface.extend;
+  Class = jsface.Class,
+  extend = jsface.extend;
 
 // include the alternative console
 var Console = require("./../console");
@@ -4437,7 +4623,7 @@ var Console = require("./../console");
 var defaultFlags = require("./default_flags");
 
 // include compiler
-var Compiler = require('./../compiler');
+var Compiler = require("./../compiler");
 
 // include language components
 var Language = require("./../language");
@@ -4453,550 +4639,544 @@ var nullConst = new Core.Variable(this._context, null);
 
 // the Interpreter class - load compiled code and executes it.
 var Interpreter = Class({
+  // Interpreter constructor
+  // @param flags - Interpreter flags to set. for more info and defaults, see file default_flags.Js.
+  constructor: function (flags) {
+    // store interpreter flags
+    this._flags = flags || {};
 
-    // Interpreter constructor
-    // @param flags - Interpreter flags to set. for more info and defaults, see file default_flags.Js.
-    constructor: function(flags)
-    {
-        // store interpreter flags
-        this._flags = flags || {};
+    // set default flags
+    for (var key in defaultFlags) {
+      if (this._flags[key] === undefined) {
+        this._flags[key] = defaultFlags[key];
+      }
+    }
 
-        // set default flags
-        for (var key in defaultFlags)
-        {
-            if (this._flags[key] === undefined)
-            {
-                this._flags[key] = defaultFlags[key];
-            }
+    // show basic info
+    Console.info("Created new interpreter!");
+    Console.log("Interpreter flags", this._flags);
+
+    // currently not executing code
+    this._resetCurrExecutionData();
+
+    // set root block to null
+    this._rootBlock = null;
+
+    // create context
+    this._context = new Core.Context(
+      this,
+      this._flags.stackLimit,
+      this._flags.maxVarsInScope
+    );
+
+    // get built-in stuff
+    this._builtins = Language.Builtins;
+
+    // set all builtin functions
+    for (var key in this._builtins.Functions) {
+      // if in removed builtin list skip
+      if (this._flags.removeBuiltins.indexOf(key) !== -1) {
+        continue;
+      }
+
+      // add builtin function
+      var val = this._builtins.Functions[key];
+      this._addBuiltinVar(key, val);
+    }
+
+    // some special consts - true, false, null, etc.
+    for (key in Language.Defs.keywords) {
+      // if in removed builtin list skip
+      if (this._flags.removeBuiltins.indexOf(key) !== -1) {
+        continue;
+      }
+
+      // add builtin keyword
+      this._addBuiltinVar(Language.Defs.keywords[key], key);
+    }
+
+    // set all builtin consts
+    for (var key in this._builtins.Consts) {
+      // if in removed builtin list skip
+      if (this._flags.removeBuiltins.indexOf(key) !== -1) {
+        continue;
+      }
+
+      // add builtin const
+      this._addBuiltinVar(key, this._builtins.Consts[key]);
+    }
+
+    // copy all the available statement types with their the corresponding keywords
+    this._statementTypes = {};
+    for (var key in Language.Statements) {
+      var currStatement = Language.Statements[key];
+      this._statementTypes[currStatement.getKeyword()] = currStatement;
+    }
+
+    // show all builtins
+    Console.log("Interpreter builtins:", this._context.getAllIdentifiers());
+  },
+
+  // reset the data of the current execution
+  _resetCurrExecutionData: function () {
+    this._currExecution = {
+      isDone: false,
+      error: null,
+      lastVal: nullConst,
+      currStatement: null,
+      currLine: -1,
+      estimatedMemoryUsage: 0,
+      maxStatementsPerRun: this._flags.maxStatementsPerRun,
+      executionTimeLimit: this._flags.executionTimeLimit,
+      executionStartTime: this._getCurrTimeMs(),
+    };
+  },
+
+  // set builtin var
+  _addBuiltinVar: function (key, val) {
+    var readonly = true;
+    var force = true;
+    var variable = new Core.Variable(this._context, val);
+    this._context.setVar(key, variable, readonly, force);
+  },
+
+  // include a module and export it to the scripts.
+  // this is the most basic way to include / exclude functionality by specific modules.
+  // @param moduleId - string, the module name.
+  // @param module - (optional) module type, use it if you want to add module that is not a built-in module.
+  addModule: function (moduleId, module) {
+    // special case - if moduleId is "ALL" or "SAFE", add all modules
+    if (moduleId === "ALL" || moduleId === "SAFE") {
+      // iterate over all built-in modules
+      for (var key in Language.Modules) {
+        // if requested only safe modules make sure its a production-safe module
+        if (moduleId === "SAFE" && !new Language.Modules[key]().isSafe) {
+          continue;
         }
 
-        // show basic info
-        Console.info("Created new interpreter!");
-        Console.log("Interpreter flags", this._flags);
+        // add module
+        this.addModule(key);
+      }
+      return;
+    }
 
-        // currently not executing code
-        this._resetCurrExecutionData();
+    Console.log("Load module: ", moduleId);
 
-        // set root block to null
-        this._rootBlock = null;
+    // get module and make sure exist
+    if (module === undefined) {
+      var module = Language.Modules[moduleId];
+      if (module === undefined) {
+        throw new Errors.InterpreterError(
+          "Module '" + moduleId + "' not defined."
+        );
+      }
+    }
 
-        // create context
-        this._context = new Core.Context(this,
-                                         this._flags.stackLimit,
-                                         this._flags.maxVarsInScope);
+    // add module to builtin vars
+    this._addBuiltinVar(
+      moduleId,
+      new module(this._context, "Module." + moduleId)
+    );
+  },
 
-        // get built-in stuff
-        this._builtins = Language.Builtins;
+  // define a new function
+  // @param name - function name.
+  // @param block - function block.
+  // @param arguments - list with function arguments names.
+  defineFunction: function (name, block, args) {
+    // make sure we got a valid block
+    if (!block) {
+      throw new Errors.SyntaxError(
+        "Missing block for function '" + name + "'!"
+      );
+    }
 
-        // set all builtin functions
-        for (var key in this._builtins.Functions)
-        {
-            // if in removed builtin list skip
-            if (this._flags.removeBuiltins.indexOf(key) !== -1) {
-                continue;
-            }
+    // create variable for this function
+    var newVar = new Core.Variable(this._context, {
+      isFunction: true,
+      name: name,
+      block: block,
+      arguments: args,
+      requiredArgs: args.length,
+      toString: function () {
+        return "<" + this.name + ">";
+      },
+      toRepr: function () {
+        return this.toString();
+      },
+      toNativeJs: function () {
+        var fn = this;
+        return function () {
+          return newVar._context._interpreter.callFunction(fn, arguments);
+        };
+      },
+    });
 
-            // add builtin function
-            var val = this._builtins.Functions[key];
-            this._addBuiltinVar(key, val);
+    // add function to current scope
+    this._context.setVar(name, newVar);
+    return newVar;
+  },
+
+  // call a function.
+  // @param func - function object or the variable containing it.
+  // @param args - args to call with.
+  // @param object - optional, object containing the function to call.
+  // @return function ret value.
+  callFunction: function (func, args, object) {
+    // if function is string, get it from context
+    if (typeof func === "string") func = this._context.getVar(func);
+
+    // if got a var containing the function, take the function value from it
+    if (func._value) {
+      func = func._value;
+    }
+
+    // make sure its a function
+    if (!func || !func.isFunction) {
+      throw new Errors.RuntimeError("'" + func + "' is not a function!");
+    }
+
+    // validate number of args required
+    if (
+      func.requiredArgs !== null &&
+      (args.length < func.requiredArgs ||
+        args.length > func.requiredArgs + func.optionalArgs)
+    ) {
+      throw new Errors.RuntimeError(
+        "'" +
+          func +
+          "' expect " +
+          func.requiredArgs +
+          " arguments. " +
+          args.length +
+          " given."
+      );
+    }
+
+    // is it a built-in function? call it
+    if (func.isBuiltinFunc) {
+      // if this builtin function require native javascript params
+      if (func.convertParamsToNativeJs) {
+        if (!args.map) {
+          args = [args];
         }
+        args = args.map(function (x) {
+          return x && x.toNativeJs ? x.toNativeJs() : x;
+        });
+      }
+      // else, convert args to Adder objects.
+      else {
+        // normalize args
+        args = Core.Variable.makeAdderObjects(this._context, args)._value._list;
+      }
 
-        // some special consts - true, false, null, etc.
-        for (key in Language.Defs.keywords)
-        {
-            // if in removed builtin list skip
-            if (this._flags.removeBuiltins.indexOf(key) !== -1) {
-                continue;
-            }
+      // make sure object is an Adder object
+      if (object !== undefined && !object.__isAdderObject) {
+        object = Core.Variable.makeAdderObjects(this._context, object)._value;
+      }
 
-            // add builtin keyword
-            this._addBuiltinVar(Language.Defs.keywords[key], key);
+      // call and return the function result
+      var ret = func.__imp.apply(object !== undefined ? object : this, args);
+      // make Adder object from returned value, deatached from original jsObject
+      if (ret && typeof ret === "object" && !ret.__isAdderObject)
+        ret = Core.Variable.makeAdderObjects(this._context, ret, true);
+      this._context.getScope().returnValue = ret;
+      this.setLastValue(ret);
+      return ret;
+    }
+
+    // if got here it means its a user-defined function
+
+    // create a new scope
+    this._context.stackPush("function");
+
+    // set arguments as local vars in function's scope
+    for (var i = 0; i < args.length; ++i) {
+      this._context.setVar(func.arguments[i], args[i]);
+    }
+
+    // execute function's block
+    func.block.execute();
+
+    // when done pop stack and return value
+    var ret = this._context.getScope().returnValue;
+    this.setLastValue(ret);
+    this._context.stackPop();
+    return ret;
+  },
+
+  // return from current scope with a given value
+  returnValue: function (val) {
+    // set return value register
+    var scope = this._context.getScope();
+    scope.returnValue = val;
+    scope.calledReturn = true;
+  },
+
+  // get current time in ms
+  _getCurrTimeMs: function () {
+    return Utils.getTime();
+  },
+
+  // return execution time of current program
+  _getExecutionTime: function () {
+    return this._getCurrTimeMs() - this._currExecution.executionStartTime;
+  },
+
+  // notify that current execution is done
+  // @param error - optional exception is occured
+  finishExecute: function (error) {
+    // set done and last exception
+    this._currExecution.isDone = true;
+    this._currExecution.error = error;
+
+    // if we had an error clear stack
+    if (error) {
+      this._context.clearStack();
+    }
+
+    // if set to throw errors outside
+    if (error && this._flags.throwErrors) {
+      throw error;
+    }
+  },
+
+  // reset context (clear stack and remove all user-defined global vars)
+  resetContext: function () {
+    this._context.reset();
+  },
+
+  // re-throw execution exception, only if had one
+  propagateExecutionErrors: function () {
+    if (this._currExecution.error) {
+      throw this._currExecution.error;
+    }
+  },
+
+  // get last exception, if happened
+  getLastError: function () {
+    return this._currExecution.error;
+  },
+
+  // update current execution memory usage
+  updateMemoryUsage: function (diff) {
+    this._currExecution.estimatedMemoryUsage += diff;
+    if (
+      this._flags.memoryAllocationLimit &&
+      this._currExecution.estimatedMemoryUsage >
+        this._flags.memoryAllocationLimit
+    ) {
+      throw new Errors.ExceedMemoryLimit("Exceeded memory usage limit!");
+    }
+  },
+
+  // execute the currently loaded code
+  // @param funcName - if provided, will call this function instead of root block.
+  execute: function (funcName) {
+    // no root block is set? exception
+    if (this._rootBlock === null) {
+      throw new Errors.InterpreterError(
+        "Tried to execute code without loading any code first!"
+      );
+    }
+
+    // reset execution data
+    this._resetCurrExecutionData();
+
+    // start execution
+    try {
+      if (funcName) {
+        this.callFunction(funcName, []);
+      } else {
+        this._rootBlock.execute();
+      }
+      this.finishExecute();
+    } catch (e) {
+      this.finishExecute(e);
+    }
+  },
+
+  // get last evaluate value
+  getLastValue: function () {
+    return this._currExecution.lastVal;
+  },
+
+  // get last statement
+  getLastStatement: function () {
+    return this._currExecution.currStatement;
+  },
+
+  // set the last evaluated value
+  setLastValue: function (value) {
+    // special case for optimizations
+    if (value === undefined || value === null || value._value === null) {
+      this._currExecution.lastVal = nullConst;
+      return;
+    }
+
+    // make sure value is a variable
+    value = Core.Variable.makeVariables(this._context, value);
+
+    // set it
+    this._currExecution.lastVal = value;
+  },
+
+  // evaluate a statement
+  evalStatement: function (statement) {
+    // reset last value
+    this.setLastValue(nullConst);
+
+    // set current line of code (for errors etc)
+    this._currExecution.currLine = statement._line;
+    this._currExecution.currStatement = statement;
+
+    // check statements limit
+    if (
+      this._currExecution.maxStatementsPerRun !== null &&
+      this._currExecution.maxStatementsPerRun-- <= 0
+    ) {
+      throw new Errors.ExceededStatementsLimit(this._flags.maxStatementsPerRun);
+    }
+
+    // check for time limit
+    if (this._currExecution.executionTimeLimit !== null) {
+      if (this._getExecutionTime() > this._currExecution.executionTimeLimit) {
+        throw new Errors.ExceededTimeLimit(this._flags.executionTimeLimit);
+      }
+    }
+
+    try {
+      // execute command
+      var ret = statement.execute();
+      this.setLastValue(ret);
+    } catch (e) {
+      // add error line number
+      if (e.message && this._currExecution.currLine && e.line === undefined) {
+        e.message += " [at line: " + this._currExecution.currLine + "]";
+        e.line = true;
+      }
+      throw e;
+    }
+  },
+
+  // evaluate a single code line
+  eval: function (code) {
+    var compiler = new Compiler(this._flags);
+    var compiled = compiler.compile(code);
+    this.load(compiled);
+    this.execute();
+  },
+
+  // convert current ast line into a statement
+  __parseStatement: function (ast, line) {
+    // check if first token is a predefined statement (like if, print, etc..)
+    var statementType = this._statementTypes[ast[0].value];
+
+    // if statement is not defined, parse this statement as a general expression (default)
+    statementType = statementType || this._statementTypes[""];
+
+    // instantiate statement
+    var currStatement = new statementType(this._context, ast, line);
+    return currStatement;
+  },
+
+  // load compiled code.
+  // @param compiledCode - the output of the compiler, basically a list of AST nodes.
+  load: function (compiledCode) {
+    Console.debug("Loading code..", compiledCode);
+
+    // get context
+    var context = this._context;
+
+    // create global block and blocks queue
+    var globalBlock = new Core.Block(context);
+    var blocksQueue = [globalBlock];
+
+    // current block and last statement parsed
+    var currBlock = globalBlock;
+    var lastStatement = { openNewBlock: false };
+
+    // iterate over compiled code and parse statements
+    for (var i = 0; i < compiledCode.length; ++i) {
+      // get current AST and line index
+      var currAst = compiledCode[i][0];
+      var line = compiledCode[i][1];
+
+      // did we just opened a new block
+      var openedNewBlock = false;
+
+      // special case - if new block
+      if (currAst === "NEW_BLOCK") {
+        // create new block and add it to blocks queue
+        var newBlock = new Core.Block(context);
+        currBlock.addBlock(newBlock);
+        blocksQueue.push(newBlock);
+
+        // mark that we just opened a new block in this statement
+        openedNewBlock = true;
+        continue;
+      }
+      // special case - if block ends
+      if (currAst === "END_BLOCK") {
+        // remove block from blocks list
+        blocksQueue.pop();
+        if (blocksQueue.length === 0) {
+          throw new Errors.InternalError(
+            "Invalid END_BLOCK token, ran out of blocks!"
+          );
         }
-
-        // set all builtin consts
-        for (var key in this._builtins.Consts)
-        {
-            // if in removed builtin list skip
-            if (this._flags.removeBuiltins.indexOf(key) !== -1) {
-                continue;
-            }
-
-            // add builtin const
-            this._addBuiltinVar(key, this._builtins.Consts[key]);
-        }
-
-        // copy all the available statement types with their the corresponding keywords
-        this._statementTypes = {};
-        for (var key in Language.Statements)
-        {
-            var currStatement = Language.Statements[key];
-            this._statementTypes[currStatement.getKeyword()] = currStatement;
-        }
-
-        // show all builtins
-        Console.log("Interpreter builtins:", this._context.getAllIdentifiers());
-    },
-
-    // reset the data of the current execution
-    _resetCurrExecutionData: function() {
-        this._currExecution = {
-            isDone: false,
-            error: null,
-            lastVal: nullConst,
-            currStatement: null,
-            currLine: -1,
-            estimatedMemoryUsage: 0,
-            maxStatementsPerRun: this._flags.maxStatementsPerRun,
-            executionTimeLimit: this._flags.executionTimeLimit,
-            executionStartTime: this._getCurrTimeMs(),
-        }
-    },
-
-    // set builtin var
-    _addBuiltinVar: function(key, val)
-    {
-        var readonly = true;
-        var force = true;
-        var variable = new Core.Variable(this._context, val);
-        this._context.setVar(key, variable, readonly, force);
-    },
-
-    // include a module and export it to the scripts.
-    // this is the most basic way to include / exclude functionality by specific modules.
-    // @param moduleId - string, the module name.
-    // @param module - (optional) module type, use it if you want to add module that is not a built-in module.
-    addModule: function(moduleId, module)
-    {
-        // special case - if moduleId is "ALL" or "SAFE", add all modules
-        if (moduleId === "ALL" || moduleId === "SAFE")
-        {
-            // iterate over all built-in modules
-            for (var key in Language.Modules) {
-
-                // if requested only safe modules make sure its a production-safe module
-                if (moduleId === "SAFE" && !(new Language.Modules[key]()).isSafe) {
-                    continue;
-                }
-
-                // add module
-                this.addModule(key);
-            }
-            return;
-        }
-
-        Console.log("Load module: ", moduleId);
-
-        // get module and make sure exist
-        if (module === undefined)
-        {
-            var module = Language.Modules[moduleId];
-            if (module === undefined) {throw new Errors.InterpreterError("Module '" + moduleId + "' not defined.");}
-        }
-
-        // add module to builtin vars
-        this._addBuiltinVar(moduleId, new module(this._context, "Module." + moduleId));
-    },
-
-    // define a new function
-    // @param name - function name.
-    // @param block - function block.
-    // @param arguments - list with function arguments names.
-    defineFunction: function(name, block, args)
-    {
-
-        // make sure we got a valid block
-        if (!block) {
-            throw new Errors.SyntaxError("Missing block for function '" + name + "'!");
-        }
-
-        // create variable for this function
-        var newVar = new Core.Variable(this._context, {
-                                  isFunction: true,
-                                  name: name,
-                                  block: block,
-                                  arguments: args,
-                                  requiredArgs: args.length,
-                                    toString: function() {
-                                        return '<' + this.name + '>';
-                                    },
-                                    toRepr: function() {
-                                        return this.toString();
-                                    },
-                                  });
-
-        // add function to current scope
-        this._context.setVar(name, newVar);
-        return newVar;
-    },
-
-    // call a function.
-    // @param func - function object or the variable containing it.
-    // @param args - args to call with.
-    // @param object - optional, object containing the function to call.
-    // @return function ret value.
-    callFunction: function(func, args, object)
-    {
-		// if function is string, get it from context
-		if (typeof func === "string")
-			func = this._context.getVar(func);
-		
-        // if got a var containing the function, take the function value from it
-        if (func._value) {
-            func = func._value;
-        }
-
-        // make sure its a function
-        if (!func || !func.isFunction)
-        {
-            throw new Errors.RuntimeError("'" + func + "' is not a function!");
-        }
-
-        // validate number of args required
-        if (func.requiredArgs !== null &&
-           (args.length < func.requiredArgs || args.length > func.requiredArgs + func.optionalArgs))
-        {
-            throw new Errors.RuntimeError("'" + func + "' expect " + func.requiredArgs + " arguments. " + args.length + " given.");
-        }
-
-        // is it a built-in function? call it
-        if (func.isBuiltinFunc)
-        {
-            // if this builtin function require native javascript params
-            if (func.convertParamsToNativeJs) {
-                if (!args.map) {args = [args];}
-                args = args.map(function(x) {
-                    return (x && x.toNativeJs) ? x.toNativeJs() : x;
-                });
-            }
-            // else, convert args to Adder objects.
-            else
-            {
-                // normalize args
-                args = Core.Variable.makeAdderObjects(this._context, args)._value._list;
-            }
-
-            // make sure object is an Adder object
-            if (object !== undefined && !object.__isAdderObject) {
-                object = Core.Variable.makeAdderObjects(this._context, object)._value;
-            }
-
-            // call and return the function result
-            var ret = func.__imp.apply(object !== undefined ? object : this, args);
-            this._context.getScope().returnValue = ret;
-            this.setLastValue(ret);
-            return ret;
-        }
-
-        // if got here it means its a user-defined function
-
-        // create a new scope
-        this._context.stackPush("function");
-
-        // set arguments as local vars in function's scope
-        for (var i = 0; i < args.length; ++i)
-        {
-            this._context.setVar(func.arguments[i], args[i]);
-        }
-
-        // execute function's block
-        func.block.execute();
-
-        // when done pop stack and return value
-        var ret = this._context.getScope().returnValue;
-        this.setLastValue(ret);
-        this._context.stackPop();
-        return ret;
-    },
-
-    // return from current scope with a given value
-    returnValue: function(val)
-    {
-        // set return value register
-        var scope = this._context.getScope();
-        scope.returnValue = val;
-        scope.calledReturn = true;
-    },
-
-    // get current time in ms
-    _getCurrTimeMs: function()
-    {
-        return Utils.getTime();
-    },
-
-    // return execution time of current program
-    _getExecutionTime: function()
-    {
-        return this._getCurrTimeMs() - this._currExecution.executionStartTime;
-    },
-
-    // notify that current execution is done
-    // @param error - optional exception is occured
-    finishExecute: function(error)
-    {
-        // set done and last exception
-        this._currExecution.isDone = true;
-        this._currExecution.error = error;
-
-        // if we had an error clear stack
-        if (error) {
-            this._context.clearStack();
-        }
-
-        // if set to throw errors outside
-        if (error && this._flags.throwErrors) {
-            throw error;
-        }
-    },
-
-    // reset context (clear stack and remove all user-defined global vars)
-    resetContext: function() {
-        this._context.reset();
-    },
-
-    // re-throw execution exception, only if had one
-    propagateExecutionErrors: function()
-    {
-        if (this._currExecution.error)
-        {
-            throw this._currExecution.error;
-        }
-    },
-
-    // get last exception, if happened
-    getLastError: function()
-    {
-        return this._currExecution.error;
-    },
-
-    // update current execution memory usage
-    updateMemoryUsage: function(diff)
-    {
-        this._currExecution.estimatedMemoryUsage += diff;
-        if (this._flags.memoryAllocationLimit &&
-            this._currExecution.estimatedMemoryUsage > this._flags.memoryAllocationLimit) {
-            throw new Errors.ExceedMemoryLimit("Exceeded memory usage limit!");
-        }
-    },
-
-    // execute the currently loaded code
-	// @param funcName - if provided, will call this function instead of root block.
-    execute: function(funcName)
-    {
-        // no root block is set? exception
-        if (this._rootBlock === null) {
-            throw new Errors.InterpreterError("Tried to execute code without loading any code first!");
-        }
-
-        // reset execution data
-        this._resetCurrExecutionData();
-
-        // start execution
-        try {
-			if (funcName) {
-				this.callFunction(funcName, []);
-			}
-			else {
-				this._rootBlock.execute();
-			}
-            this.finishExecute();
-        }
-        catch(e) {
-            this.finishExecute(e);
-        }
-    },
-
-    // get last evaluate value
-    getLastValue: function()
-    {
-        return this._currExecution.lastVal;
-    },
-
-    // get last statement
-    getLastStatement: function()
-    {
-        return this._currExecution.currStatement;
-    },
-
-    // set the last evaluated value
-    setLastValue: function(value)
-    {
-        // special case for optimizations
-        if (value === undefined || value === null || value._value === null) {
-            this._currExecution.lastVal = nullConst;
-            return;
-        }
-
-        // make sure value is a variable
-        value = Core.Variable.makeVariables(this._context, value);
-
-        // set it
-        this._currExecution.lastVal = value;
-    },
-
-    // evaluate a statement
-    evalStatement: function(statement)
-    {
-        // reset last value
-        this.setLastValue(nullConst);
-
-        // set current line of code (for errors etc)
-        this._currExecution.currLine = statement._line;
-        this._currExecution.currStatement = statement;
-
-        // check statements limit
-        if (this._currExecution.maxStatementsPerRun !== null &&
-            this._currExecution.maxStatementsPerRun-- <= 0) {
-            throw new Errors.ExceededStatementsLimit(this._flags.maxStatementsPerRun);
-        }
-
-        // check for time limit
-        if (this._currExecution.executionTimeLimit !== null) {
-            if (this._getExecutionTime() > this._currExecution.executionTimeLimit) {
-                throw new Errors.ExceededTimeLimit(this._flags.executionTimeLimit);
-            }
-        }
-
-        try {
-
-            // execute command
-            var ret = statement.execute();
-            this.setLastValue(ret);
-
-        } catch (e) {
-
-            // add error line number
-            if (e.message && this._currExecution.currLine && e.line === undefined)
-            {
-                e.message += " [at line: " + this._currExecution.currLine + "]"
-                e.line = true;
-            }
-            throw e;
-        }
-    },
-
-    // evaluate a single code line
-    eval: function(code)
-    {
-        var compiler = new Compiler(this._flags);
-        var compiled = compiler.compile(code);
-        this.load(compiled);
-        this.execute();
-    },
-
-    // convert current ast line into a statement
-    __parseStatement: function(ast, line)
-    {
-        // check if first token is a predefined statement (like if, print, etc..)
-        var statementType = this._statementTypes[ast[0].value];
-
-        // if statement is not defined, parse this statement as a general expression (default)
-        statementType = statementType || this._statementTypes[""];
-
-        // instantiate statement
-        var currStatement = new statementType(this._context, ast, line);
-        return currStatement;
-    },
-
-    // load compiled code.
-    // @param compiledCode - the output of the compiler, basically a list of AST nodes.
-    load: function(compiledCode)
-    {
-        Console.debug("Loading code..", compiledCode);
-
-        // get context
-        var context = this._context;
-
-        // create global block and blocks queue
-        var globalBlock = new Core.Block(context);
-        var blocksQueue = [globalBlock];
-
-        // current block and last statement parsed
-        var currBlock = globalBlock;
-        var lastStatement = {openNewBlock: false};
-
-        // iterate over compiled code and parse statements
-        for (var i = 0; i < compiledCode.length; ++i)
-        {
-            // get current AST and line index
-            var currAst = compiledCode[i][0];
-            var line = compiledCode[i][1];
-
-            // did we just opened a new block
-            var openedNewBlock = false;
-
-            // special case - if new block
-            if (currAst === "NEW_BLOCK") {
-
-                // create new block and add it to blocks queue
-                var newBlock = new Core.Block(context);
-                currBlock.addBlock(newBlock);
-                blocksQueue.push(newBlock);
-
-                // mark that we just opened a new block in this statement
-                openedNewBlock = true;
-                continue;
-            }
-            // special case - if block ends
-            if (currAst === "END_BLOCK") {
-
-                // remove block from blocks list
-                blocksQueue.pop();
-                if (blocksQueue.length === 0) {
-                    throw new Errors.InternalError("Invalid END_BLOCK token, ran out of blocks!");
-                }
-                continue;
-            }
-
-            // if last statement was a statement that opens a new block, make sure it did
-            if (lastStatement.OpenNewBlock && !openedNewBlock)
-            {
-                throw new Errors.SyntaxError('Missing block indent.', line);
-            }
-            // now check the opposite - opened a new block without proper reason
-            else if (!lastStatement.OpenNewBlock && openedNewBlock)
-            {
-                throw new Errors.SyntaxError('Unexpected block indent.', line);
-            }
-
-            // skip empty
-            if (currAst.length === 0) {continue;}
-
-            // parse into statement
-            var statement = this.__parseStatement(currAst, line);
-
-            // get current block
-            currBlock = blocksQueue[blocksQueue.length-1];
-
-            // get last statement in current block and set it as current statement previous statement
-            var lastStatementInBlock = currBlock._lastStatement;
-            statement.setPreviousStatement(lastStatementInBlock);
-
-            // add current statement
-            currBlock.addStatement(statement);
-
-            // store current statement as last statement
-            lastStatement = statement;
-        }
-
-        // set global block as our new root block
-        this._rootBlock = globalBlock;
-        Console.debug("Code loaded successfully!");
-    },
-
-    // return a debug representation of the blocks
-    getDebugBlocksView: function() {
-        return this._rootBlock.getDebugBlocksView(0);
-    },
-
-    // program output function
-    output: function() {
-        console.log.apply(null, arguments);
-    },
+        continue;
+      }
+
+      // if last statement was a statement that opens a new block, make sure it did
+      if (lastStatement.OpenNewBlock && !openedNewBlock) {
+        throw new Errors.SyntaxError("Missing block indent.", line);
+      }
+      // now check the opposite - opened a new block without proper reason
+      else if (!lastStatement.OpenNewBlock && openedNewBlock) {
+        throw new Errors.SyntaxError("Unexpected block indent.", line);
+      }
+
+      // skip empty
+      if (currAst.length === 0) {
+        continue;
+      }
+
+      // parse into statement
+      var statement = this.__parseStatement(currAst, line);
+
+      // get current block
+      currBlock = blocksQueue[blocksQueue.length - 1];
+
+      // get last statement in current block and set it as current statement previous statement
+      var lastStatementInBlock = currBlock._lastStatement;
+      statement.setPreviousStatement(lastStatementInBlock);
+
+      // add current statement
+      currBlock.addStatement(statement);
+
+      // store current statement as last statement
+      lastStatement = statement;
+    }
+
+    // set global block as our new root block
+    this._rootBlock = globalBlock;
+    Console.debug("Code loaded successfully!");
+  },
+
+  // return a debug representation of the blocks
+  getDebugBlocksView: function () {
+    return this._rootBlock.getDebugBlocksView(0);
+  },
+
+  // program output function
+  output: function () {
+    console.log.apply(null, arguments);
+  },
 });
 
 // export the Interpreter class
 module.exports = Interpreter;
-
 
 },{"./../compiler":3,"./../console":7,"./../core":14,"./../dependencies/jsface":24,"./../errors":28,"./../language":61,"./../utils":79,"./default_flags":30}],33:[function(require,module,exports){
 "use strict";
@@ -5331,16 +5511,16 @@ module.exports = Core.BuiltinFunc.create(function(variable)
 "use strict";
 
 /**
-* Implement the dict() function
-*
-* Author: Ronen Ness.
-* Since: 2016.
-*/
+ * Implement the dict() function
+ *
+ * Author: Ronen Ness.
+ * Since: 2016.
+ */
 
 // include jsface for classes
 var jsface = require("./../../dependencies/jsface"),
-    Class  = jsface.Class,
-    extend = jsface.extend;
+  Class = jsface.Class,
+  extend = jsface.extend;
 
 // include errors
 var Errors = require("./../../errors");
@@ -5352,11 +5532,19 @@ var Core = require("./../../core");
 var Utils = require("./../../utils");
 
 // export the function
-module.exports = Core.BuiltinFunc.create(function()
-    {
-        return new Core.Dict(this._context);
-    },
-    0, 0, false);
+module.exports = Core.BuiltinFunc.create(
+  function () {
+    var startobj = {};
+    var arg = Utils.toArray(arguments);
+    for (var i = 1; i < arg.length; i += 2) {
+      startobj[arg[i - 1]] = arg[i];
+    }
+    return new Core.Dict(this._context, startobj);
+  },
+  null,
+  null,
+  false
+);
 
 },{"./../../core":14,"./../../dependencies/jsface":24,"./../../errors":28,"./../../utils":79}],44:[function(require,module,exports){
 "use strict";
